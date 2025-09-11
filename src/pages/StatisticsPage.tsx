@@ -1,539 +1,628 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Select,
-  Space,
-  Table,
-  Empty,
-  message,
-  Spin
+	Card,
+	Row,
+	Col,
+	Statistic,
+	Select,
+	Space,
+	Table,
+	Empty,
+	message,
+	Spin,
 } from 'antd';
 import { DatePicker } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { productService, orderService } from '../db';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+	AreaChart,
+	Area,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip,
+	ResponsiveContainer,
+	PieChart,
+	Pie,
+	Cell,
 } from 'recharts';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 interface OrderItem {
-  id: string;
-  productId: string;
-  productName?: string;
-  category?: string;
-  quantity: number;
-  unitPrice: number;
-  orderId: string;
-  createdAt?: string;
+	id: string;
+	productId: string;
+	productName?: string;
+	category?: string;
+	quantity: number;
+	unitPrice: number;
+	orderId: string;
+	createdAt?: string;
 }
 
 interface Product {
-  id: string;
-  name: string;
-  category?: string;
-  price: number;
-  stock: number;
-  image?: string;
-  barcode?: string;
-  unit?: string;
-  createdAt?: string;
-  updatedAt?: string;
+	id: string;
+	name: string;
+	category?: string;
+	price: number;
+	stock: number;
+	image?: string;
+	barcode?: string;
+	unit?: string;
+	createdAt?: string;
+	updatedAt?: string;
 }
 
 interface ProductRankingItem {
-  productId: string;
-  productName: string;
-  category: string;
-  salesQuantity: number;
-  salesAmount: number;
+	productId: string;
+	productName: string;
+	category: string;
+	salesQuantity: number;
+	salesAmount: number;
 }
 
 interface CategorySalesItem {
-  category: string;
-  salesAmount: number;
-  value: number;
+	category: string;
+	salesAmount: number;
+	value: number;
 }
 
 interface SalesTrendItem {
-  date: string;
-  salesAmount: number;
-  orderCount: number;
+	date: string;
+	salesAmount: number;
+	orderCount: number;
 }
 
 interface StatisticsData {
-  totalSales: number;
-  totalOrders: number;
-  averageOrderValue: number;
+	totalSales: number;
+	totalOrders: number;
+	averageOrderValue: number;
 }
 
 const StatisticsPage: React.FC = () => {
-  // 状态管理
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
-    dayjs().subtract(7, 'day').startOf('day'),
-    dayjs().endOf('day'),
-  ]);
-  const [selectedProduct, setSelectedProduct] = useState<string>('all');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [statistics, setStatistics] = useState<StatisticsData>({
-    totalSales: 0,
-    totalOrders: 0,
-    averageOrderValue: 0,
-  });
-  const [salesTrendData, setSalesTrendData] = useState<SalesTrendItem[]>([]);
-  const [productRankingData, setProductRankingData] = useState<ProductRankingItem[]>([]);
-  const [categorySalesData, setCategorySalesData] = useState<CategorySalesItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+	// 状态管理
+	const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
+		dayjs().subtract(7, 'day').startOf('day'),
+		dayjs().endOf('day'),
+	]);
+	const [selectedProduct, setSelectedProduct] = useState<string>('all');
+	const [products, setProducts] = useState<Product[]>([]);
+	const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+	const [statistics, setStatistics] = useState<StatisticsData>({
+		totalSales: 0,
+		totalOrders: 0,
+		averageOrderValue: 0,
+	});
+	const [salesTrendData, setSalesTrendData] = useState<SalesTrendItem[]>([]);
+	const [productRankingData, setProductRankingData] = useState<
+		ProductRankingItem[]
+	>([]);
+	const [categorySalesData, setCategorySalesData] = useState<
+		CategorySalesItem[]
+	>([]);
+	const [loading, setLoading] = useState<boolean>(false);
+	const [error, setError] = useState<string | null>(null);
 
-  // 加载商品数据
-  const loadProducts = useCallback(async () => {
-    try {
-      const { list } = await productService.getAll();
-      setProducts(list);
-    } catch (err) {
-      console.error('Error loading products:', err);
-      setError('加载商品数据失败');
-      message.error('加载商品数据失败');
-    }
-  }, []);
+	// 加载商品数据
+	const loadProducts = useCallback(async () => {
+		try {
+			const { list } = await productService.getAll();
+			setProducts(list);
+		} catch (err) {
+			console.error('Error loading products:', err);
+			setError('加载商品数据失败');
+			message.error('加载商品数据失败');
+		}
+	}, []);
 
-  // 加载订单数据
-  const loadOrders = useCallback(async () => {
-    if (!dateRange || !dateRange[0] || !dateRange[1]) return;
+	// 加载订单数据
+	const loadOrders = useCallback(async () => {
+		if (!dateRange || !dateRange[0] || !dateRange[1]) return;
 
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // 调整日期范围为开始时间的0点和结束时间的23:59:59
-      const startDate = dateRange[0].startOf('day').format('YYYY-MM-DD HH:mm:ss');
-      const endDate = dateRange[1].endOf('day').format('YYYY-MM-DD HH:mm:ss');
-      
-      // 获取日期范围内的所有订单
-      const ordersInRange = await orderService.getByDateRange(startDate, endDate);
-      
-      // 获取这些订单的所有订单项
-      const allOrderItems: OrderItem[] = [];
-      for (const order of ordersInRange) {
-        const items = await orderService.getOrderItems(order.id);
-        // 为每个订单项添加订单的createdAt日期
-        const itemsWithDate = items.map(item => ({
-          ...item,
-          createdAt: item.createdAt || order.createdAt
-        }));
-        allOrderItems.push(...itemsWithDate);
-      }
-      
-      setOrderItems(allOrderItems);
-    } catch (err) {
-      console.error('Error loading orders:', err);
-      setError('加载订单数据失败');
-      message.error('加载订单数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [dateRange]);
+		setLoading(true);
+		setError(null);
 
-  // 计算统计数据
-  const calculateStatistics = useCallback((items: OrderItem[]) => {
-    if (!items.length) {
-      return {
-        totalSales: 0,
-        totalOrders: 0,
-        averageOrderValue: 0,
-      };
-    }
+		try {
+			// 调整日期范围为开始时间的0点和结束时间的23:59:59
+			const startDate = dateRange[0]
+				.startOf('day')
+				.format('YYYY-MM-DD HH:mm:ss');
+			const endDate = dateRange[1]
+				.endOf('day')
+				.format('YYYY-MM-DD HH:mm:ss');
 
-    const totalSales = items.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0
-    );
-    const orderIds = new Set(items.map((item) => item.orderId));
-    const totalOrders = orderIds.size;
-    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+			// 获取日期范围内的所有订单
+			const ordersInRange = await orderService.getByDateRange(
+				startDate,
+				endDate
+			);
 
-    return {
-      totalSales,
-      totalOrders,
-      averageOrderValue,
-    };
-  }, []);
+			// 获取这些订单的所有订单项
+			const allOrderItems: OrderItem[] = [];
+			for (const order of ordersInRange) {
+				const items = await orderService.getOrderItems(order.id);
+				// 为每个订单项添加订单的createdAt日期
+				const itemsWithDate = items.map((item) => ({
+					...item,
+					createdAt: item.createdAt || order.createdAt,
+				}));
+				allOrderItems.push(...itemsWithDate);
+			}
 
-  // 生成销售趋势数据
-  const generateSalesTrendData = useCallback((items: OrderItem[]) => {
-    const dateMap = new Map<string, { salesAmount: number; orderIds: Set<string> }>();
+			setOrderItems(allOrderItems);
+		} catch (err) {
+			console.error('Error loading orders:', err);
+			setError('加载订单数据失败');
+			message.error('加载订单数据失败');
+		} finally {
+			setLoading(false);
+		}
+	}, [dateRange]);
 
-    // 按日期聚合数据
-    items.forEach((item) => {
-      // 使用订单日期作为后备选项
-      const date = item.createdAt ? dayjs(item.createdAt).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
-      
-      if (dateMap.has(date)) {
-        const data = dateMap.get(date)!;
-        data.salesAmount += item.unitPrice * item.quantity;
-        data.orderIds.add(item.orderId);
-      } else {
-        dateMap.set(date, {
-          salesAmount: item.unitPrice * item.quantity,
-          orderIds: new Set([item.orderId]),
-        });
-      }
-    });
+	// 计算统计数据
+	const calculateStatistics = useCallback((items: OrderItem[]) => {
+		if (!items.length) {
+			return {
+				totalSales: 0,
+				totalOrders: 0,
+				averageOrderValue: 0,
+			};
+		}
 
-    // 转换为数组并排序
-    const trendData: SalesTrendItem[] = Array.from(dateMap.entries())
-      .map(([date, data]) => ({
-        date,
-        salesAmount: data.salesAmount,
-        orderCount: data.orderIds.size,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+		const totalSales = items.reduce(
+			(sum, item) => sum + item.unitPrice * item.quantity,
+			0
+		);
+		const orderIds = new Set(items.map((item) => item.orderId));
+		const totalOrders = orderIds.size;
+		const averageOrderValue =
+			totalOrders > 0 ? totalSales / totalOrders : 0;
 
-    return trendData;
-  }, []);
+		return {
+			totalSales,
+			totalOrders,
+			averageOrderValue,
+		};
+	}, []);
 
-  // 生成商品销售排行数据
-  const generateProductRankingData = useCallback((items: OrderItem[], productList: Product[]) => {
-    const productMap = new Map<string, { salesQuantity: number; salesAmount: number; productName: string; category: string }>();
+	// 生成销售趋势数据
+	const generateSalesTrendData = useCallback((items: OrderItem[]) => {
+		const dateMap = new Map<
+			string,
+			{ salesAmount: number; orderIds: Set<string> }
+		>();
 
-    // 构建商品ID到商品信息的映射，提高查找效率
-    const productIdMap = new Map(productList.map(product => [product.id, product]));
+		// 按日期聚合数据
+		items.forEach((item) => {
+			// 使用订单日期作为后备选项
+			const date = item.createdAt
+				? dayjs(item.createdAt).format('YYYY-MM-DD')
+				: dayjs().format('YYYY-MM-DD');
 
-    // 聚合每个商品的销售数据和商品信息
-    items.forEach((item) => {
-      // 从映射中快速查找商品信息
-      const product = productIdMap.get(item.productId);
-      // 优先使用完整的商品信息，其次是订单项中的信息，最后是默认值
-      const productName = product?.name || item.productName || '未知商品';
-      const category = product?.category || item.category || '未分类';
+			if (dateMap.has(date)) {
+				const data = dateMap.get(date)!;
+				data.salesAmount += item.unitPrice * item.quantity;
+				data.orderIds.add(item.orderId);
+			} else {
+				dateMap.set(date, {
+					salesAmount: item.unitPrice * item.quantity,
+					orderIds: new Set([item.orderId]),
+				});
+			}
+		});
 
-      if (productMap.has(item.productId)) {
-        const data = productMap.get(item.productId)!;
-        productMap.set(item.productId, {
-          salesQuantity: data.salesQuantity + item.quantity,
-          salesAmount: data.salesAmount + item.unitPrice * item.quantity,
-          productName: productName, // 直接使用最新获取的名称，避免旧值覆盖新值
-          category: category, // 直接使用最新获取的分类
-        });
-      } else {
-        productMap.set(item.productId, {
-          salesQuantity: item.quantity,
-          salesAmount: item.unitPrice * item.quantity,
-          productName: productName,
-          category: category,
-        });
-      }
-    });
+		// 转换为数组并排序
+		const trendData: SalesTrendItem[] = Array.from(dateMap.entries())
+			.map(([date, data]) => ({
+				date,
+				salesAmount: data.salesAmount,
+				orderCount: data.orderIds.size,
+			}))
+			.sort((a, b) => a.date.localeCompare(b.date));
 
-    // 转换为数组并确保所有数据完整
-    const rankingData: ProductRankingItem[] = Array.from(productMap.entries()).map(
-      ([productId, data]) => ({
-        productId,
-        productName: data.productName || '未知商品',
-        category: data.category || '未分类',
-        salesQuantity: data.salesQuantity,
-        salesAmount: data.salesAmount,
-      })
-    );
+		return trendData;
+	}, []);
 
-    // 按销售数量排序并取前10名
-    return rankingData
-      .sort((a, b) => b.salesQuantity - a.salesQuantity)
-      .slice(0, 10);
-  }, []);
+	// 生成商品销售排行数据
+	const generateProductRankingData = useCallback(
+		(items: OrderItem[], productList: Product[]) => {
+			const productMap = new Map<
+				string,
+				{
+					salesQuantity: number;
+					salesAmount: number;
+					productName: string;
+					category: string;
+				}
+			>();
 
-  // 生成分类销售数据
-  const generateCategorySalesData = useCallback((items: OrderItem[], productList: Product[]) => {
-    const categoryMap = new Map<string, number>();
+			// 构建商品ID到商品信息的映射，提高查找效率
+			const productIdMap = new Map(
+				productList.map((product) => [product.id, product])
+			);
 
-    // 聚合每个分类的销售数据
-    items.forEach((item) => {
-      const product = productList.find((p) => p.id === item.productId);
-      const category = product?.category || item.category || '未分类';
+			// 聚合每个商品的销售数据和商品信息
+			items.forEach((item) => {
+				// 从映射中快速查找商品信息
+				const product = productIdMap.get(item.productId);
+				// 优先使用完整的商品信息，其次是订单项中的信息，最后是默认值
+				const productName =
+					product?.name || item.productName || '未知商品';
+				const category = product?.category || item.category || '未分类';
 
-      if (categoryMap.has(category)) {
-        categoryMap.set(
-          category,
-          categoryMap.get(category)! + item.unitPrice * item.quantity
-        );
-      } else {
-        categoryMap.set(category, item.unitPrice * item.quantity);
-      }
-    });
+				if (productMap.has(item.productId)) {
+					const data = productMap.get(item.productId)!;
+					productMap.set(item.productId, {
+						salesQuantity: data.salesQuantity + item.quantity,
+						salesAmount:
+							data.salesAmount + item.unitPrice * item.quantity,
+						productName: productName, // 直接使用最新获取的名称，避免旧值覆盖新值
+						category: category, // 直接使用最新获取的分类
+					});
+				} else {
+					productMap.set(item.productId, {
+						salesQuantity: item.quantity,
+						salesAmount: item.unitPrice * item.quantity,
+						productName: productName,
+						category: category,
+					});
+				}
+			});
 
-    // 转换为数组
-    const categoryData: CategorySalesItem[] = Array.from(categoryMap.entries()).map(
-      ([category, salesAmount]) => ({
-        category,
-        salesAmount,
-        value: salesAmount,
-      })
-    );
+			// 转换为数组并确保所有数据完整
+			const rankingData: ProductRankingItem[] = Array.from(
+				productMap.entries()
+			).map(([productId, data]) => ({
+				productId,
+				productName: data.productName || '未知商品',
+				category: data.category || '未分类',
+				salesQuantity: data.salesQuantity,
+				salesAmount: data.salesAmount,
+			}));
 
-    return categoryData;
-  }, []);
+			// 按销售数量排序并取前10名
+			return rankingData
+				.sort((a, b) => b.salesQuantity - a.salesQuantity)
+				.slice(0, 10);
+		},
+		[]
+	);
 
-  // 过滤订单数据
-  const filterOrderItems = useCallback((items: OrderItem[]) => {
-    if (selectedProduct === 'all') {
-      return items;
-    }
-    return items.filter((item) => item.productId === selectedProduct);
-  }, [selectedProduct]);
+	// 生成分类销售数据
+	const generateCategorySalesData = useCallback(
+		(items: OrderItem[], productList: Product[]) => {
+			const categoryMap = new Map<string, number>();
 
-  // 处理数据更新
-  useEffect(() => {
-    if (orderItems.length === 0 || products.length === 0) return;
+			// 聚合每个分类的销售数据
+			items.forEach((item) => {
+				const product = productList.find(
+					(p) => p.id === item.productId
+				);
+				const category = product?.category || item.category || '未分类';
 
-    const filteredItems = filterOrderItems(orderItems);
-    
-    // 更新统计数据
-    setStatistics(calculateStatistics(filteredItems));
-    
-    // 更新销售趋势数据
-    setSalesTrendData(generateSalesTrendData(filteredItems));
-    
-    // 更新商品销售排行数据
-    setProductRankingData(generateProductRankingData(filteredItems, products));
-    
-    // 更新分类销售数据
-    setCategorySalesData(generateCategorySalesData(filteredItems, products));
-  }, [orderItems, products, filterOrderItems, calculateStatistics, generateSalesTrendData, generateProductRankingData, generateCategorySalesData]);
+				if (categoryMap.has(category)) {
+					categoryMap.set(
+						category,
+						categoryMap.get(category)! +
+							item.unitPrice * item.quantity
+					);
+				} else {
+					categoryMap.set(category, item.unitPrice * item.quantity);
+				}
+			});
 
-  // 处理日期范围变更
-  useEffect(() => {
-    if (dateRange && dateRange[0] && dateRange[1]) {
-      loadOrders();
-    }
-  }, [dateRange, loadOrders]);
+			// 转换为数组
+			const categoryData: CategorySalesItem[] = Array.from(
+				categoryMap.entries()
+			).map(([category, salesAmount]) => ({
+				category,
+				salesAmount,
+				value: salesAmount,
+			}));
 
-  // 初始化加载商品数据
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+			return categoryData;
+		},
+		[]
+	);
 
-  // 处理商品选择变更
-  const handleProductChange = (value: string) => {
-    setSelectedProduct(value);
-  };
+	// 过滤订单数据
+	const filterOrderItems = useCallback(
+		(items: OrderItem[]) => {
+			if (selectedProduct === 'all') {
+				return items;
+			}
+			return items.filter((item) => item.productId === selectedProduct);
+		},
+		[selectedProduct]
+	);
 
-  // 处理日期范围选择
-  const handleDateChange = (dates: [Dayjs, Dayjs] | null) => {
-    // 验证日期范围是否有效
-    if (dates) {
-      const daysDiff = dates[1].diff(dates[0], 'day');
-      if (daysDiff > 365) {
-        message.warning('日期范围不能超过1年');
-        return;
-      }
-    }
-    setDateRange(dates);
-  };
+	// 处理数据更新
+	useEffect(() => {
+		if (orderItems.length === 0 || products.length === 0) return;
 
-  // 商品销售排行表格列配置
-  const rankingColumns = [
-    {
-      title: '排名',
-      key: 'ranking',
-      render: (_, __, index) => index + 1,
-      width: 60,
-    },
-    {
-      title: '商品名称',
-      dataIndex: 'productName',
-      key: 'productName',
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-    },
-    {
-      title: '销售数量',
-      dataIndex: 'salesQuantity',
-      key: 'salesQuantity',
-    },
-    {
-      title: '销售额',
-      dataIndex: 'salesAmount',
-      key: 'salesAmount',
-      render: (text: number) => text.toFixed(2),
-    },
-  ];
+		const filteredItems = filterOrderItems(orderItems);
 
-  // 饼图颜色
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a78bfa'];
+		// 更新统计数据
+		setStatistics(calculateStatistics(filteredItems));
 
-  return (
-    <div className="p-4 bg-white min-h-screen">
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-md">
-          {error}
-        </div>
-      )}
-      
-      {loading && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50">
-          <Spin size="large" />
-        </div>
-      )}
-      
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4">销售统计</h1>
-        <Space>
-          <RangePicker
-            value={dateRange}
-            onChange={handleDateChange}
-            style={{ width: 300 }}
-          />
-          <Select
-            style={{ width: 200 }}
-            placeholder="选择商品"
-            value={selectedProduct}
-            onChange={handleProductChange}
-          >
-            <Option value="all">全部商品</Option>
-            {products.map((product) => (
-              <Option key={product.id} value={product.id}>
-                {product.name}
-              </Option>
-            ))}
-          </Select>
-        </Space>
-      </div>
+		// 更新销售趋势数据
+		setSalesTrendData(generateSalesTrendData(filteredItems));
 
-      {/* 统计卡片 */}
-      <Row gutter={16} className="mb-6">
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="总销售额"
-              value={statistics.totalSales}
-              precision={2}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="订单总数"
-              value={statistics.totalOrders}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="平均订单价值"
-              value={statistics.averageOrderValue}
-              precision={2}
-              valueStyle={{ color: '#cf1322' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+		// 更新商品销售排行数据
+		setProductRankingData(
+			generateProductRankingData(filteredItems, products)
+		);
 
-      {/* 销售趋势图表 */}
-      <Row gutter={16} className="mb-6">
-        <Col span={24}>
-          <Card title="销售趋势" style={{ height: 400 }}>
-            {salesTrendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={salesTrendData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="salesAmount"
-                    stroke="#8884d8"
-                    fillOpacity={1}
-                    fill="url(#colorSales)"
-                    name="销售额"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <Empty description="暂无销售数据" />
-            )}
-          </Card>
-        </Col>
-      </Row>
+		// 更新分类销售数据
+		setCategorySalesData(
+			generateCategorySalesData(filteredItems, products)
+		);
+	}, [
+		orderItems,
+		products,
+		filterOrderItems,
+		calculateStatistics,
+		generateSalesTrendData,
+		generateProductRankingData,
+		generateCategorySalesData,
+	]);
 
-      {/* 商品销售排行和分类销售统计 */}
-      <Row gutter={16}>
-        <Col span={16}>
-          <Card title="商品销售排行（前10名）">
-            {productRankingData.length > 0 ? (
-              <Table
-                columns={rankingColumns}
-                dataSource={productRankingData}
-                rowKey="productId"
-                pagination={false}
-              />
-            ) : (
-              <Empty description="暂无销售数据" />
-            )}
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card title="分类销售统计">
-            {categorySalesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categorySalesData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ category, percent }: any) =>
-                      `${category}: ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categorySalesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: any) => `¥${Number(value).toFixed(2)}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <Empty description="暂无销售数据" />
-            )}
-          </Card>
-        </Col>
-      </Row>
-    </div>
-  );
+	// 处理日期范围变更
+	useEffect(() => {
+		if (dateRange && dateRange[0] && dateRange[1]) {
+			loadOrders();
+		}
+	}, [dateRange, loadOrders]);
+
+	// 初始化加载商品数据
+	useEffect(() => {
+		loadProducts();
+	}, [loadProducts]);
+
+	// 处理商品选择变更
+	const handleProductChange = (value: string) => {
+		setSelectedProduct(value);
+	};
+
+	// 处理日期范围选择
+	const handleDateChange = (dates: [Dayjs, Dayjs] | null) => {
+		// 验证日期范围是否有效
+		if (dates) {
+			const daysDiff = dates[1].diff(dates[0], 'day');
+			if (daysDiff > 365) {
+				message.warning('日期范围不能超过1年');
+				return;
+			}
+		}
+		setDateRange(dates);
+	};
+
+	// 商品销售排行表格列配置
+	const rankingColumns = [
+		{
+			title: '排名',
+			key: 'ranking',
+			render: (_, __, index) => index + 1,
+			width: 60,
+		},
+		{
+			title: '商品名称',
+			dataIndex: 'productName',
+			key: 'productName',
+		},
+		{
+			title: '分类',
+			dataIndex: 'category',
+			key: 'category',
+		},
+		{
+			title: '销售数量',
+			dataIndex: 'salesQuantity',
+			key: 'salesQuantity',
+		},
+		{
+			title: '销售额',
+			dataIndex: 'salesAmount',
+			key: 'salesAmount',
+			render: (text: number) => text.toFixed(2),
+		},
+	];
+
+	// 饼图颜色
+	const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a78bfa'];
+	console.log(salesTrendData, 'salesTrendData');
+
+	return (
+		<Spin size="large" spinning={loading}>
+			<div className="p-4 bg-white min-h-screen">
+				{error && (
+					<div className="mb-4 p-4 bg-red-50 text-red-600 rounded-md">
+						{error}
+					</div>
+				)}
+
+				<div className="mb-6">
+					<h1 className="text-2xl font-bold mb-4">销售统计</h1>
+					<Space>
+						<RangePicker
+							value={dateRange}
+							onChange={handleDateChange}
+							style={{ width: 300 }}
+						/>
+						<Select
+							style={{ width: 200 }}
+							placeholder="选择商品"
+							value={selectedProduct}
+							onChange={handleProductChange}
+						>
+							<Option value="all">全部商品</Option>
+							{products.map((product) => (
+								<Option key={product.id} value={product.id}>
+									{product.name}
+								</Option>
+							))}
+						</Select>
+					</Space>
+				</div>
+
+				{/* 统计卡片 */}
+				<Row gutter={16} className="mb-6">
+					<Col span={8}>
+						<Card>
+							<Statistic
+								title="总销售额"
+								value={statistics.totalSales}
+								precision={2}
+								valueStyle={{ color: '#3f8600' }}
+							/>
+						</Card>
+					</Col>
+					<Col span={8}>
+						<Card>
+							<Statistic
+								title="订单总数"
+								value={statistics.totalOrders}
+							/>
+						</Card>
+					</Col>
+					<Col span={8}>
+						<Card>
+							<Statistic
+								title="平均订单价值"
+								value={statistics.averageOrderValue}
+								precision={2}
+								valueStyle={{ color: '#cf1322' }}
+							/>
+						</Card>
+					</Col>
+				</Row>
+
+				{/* 销售趋势图表 */}
+				<Row gutter={16} className="mb-6">
+					<Col span={24}>
+						<Card title="销售趋势" style={{ height: 400 }}>
+							{salesTrendData.length > 0 ? (
+								<ResponsiveContainer width="100%" height="100%">
+									<AreaChart
+										data={salesTrendData}
+										margin={{
+											top: 10,
+											right: 30,
+											left: 0,
+											bottom: 0,
+										}}
+									>
+										<defs>
+											<linearGradient
+												id="colorSales"
+												x1="0"
+												y1="0"
+												x2="0"
+												y2="1"
+											>
+												<stop
+													offset="5%"
+													stopColor="#8884d8"
+													stopOpacity={0.8}
+												/>
+												<stop
+													offset="95%"
+													stopColor="#8884d8"
+													stopOpacity={0}
+												/>
+											</linearGradient>
+										</defs>
+										<XAxis dataKey="date" />
+										<YAxis />
+										<CartesianGrid strokeDasharray="3 3" />
+										<Tooltip />
+										<Area
+											type="monotone"
+											dataKey="salesAmount"
+											stroke="#8884d8"
+											fillOpacity={1}
+											fill="url(#colorSales)"
+											name="销售额"
+										/>
+									</AreaChart>
+								</ResponsiveContainer>
+							) : (
+								<Empty description="暂无销售数据" />
+							)}
+						</Card>
+					</Col>
+				</Row>
+
+				{/* 商品销售排行和分类销售统计 */}
+				<Row gutter={16}>
+					<Col span={16}>
+						<Card title="商品销售排行（前10名）">
+							{productRankingData.length > 0 ? (
+								<Table
+									columns={rankingColumns}
+									dataSource={productRankingData}
+									rowKey="productId"
+									pagination={false}
+								/>
+							) : (
+								<Empty description="暂无销售数据" />
+							)}
+						</Card>
+					</Col>
+					<Col span={8}>
+						<Card title="分类销售统计">
+							{categorySalesData.length > 0 ? (
+								<ResponsiveContainer width="100%" height={300}>
+									<PieChart>
+										<Pie
+											data={categorySalesData}
+											cx="50%"
+											cy="50%"
+											labelLine={false}
+											label={({
+												category,
+												percent,
+											}: any) =>
+												`${category}: ${(
+													percent * 100
+												).toFixed(0)}%`
+											}
+											outerRadius={80}
+											fill="#8884d8"
+											dataKey="value"
+										>
+											{categorySalesData.map(
+												(entry, index) => (
+													<Cell
+														key={`cell-${index}`}
+														fill={
+															COLORS[
+																index %
+																	COLORS.length
+															]
+														}
+													/>
+												)
+											)}
+										</Pie>
+										<Tooltip
+											formatter={(value: any) =>
+												`¥${Number(value).toFixed(2)}`
+											}
+										/>
+									</PieChart>
+								</ResponsiveContainer>
+							) : (
+								<Empty description="暂无销售数据" />
+							)}
+						</Card>
+					</Col>
+				</Row>
+			</div>
+		</Spin>
+	);
 };
 
 export default StatisticsPage;

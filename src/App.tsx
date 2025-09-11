@@ -30,40 +30,21 @@ function App() {
 	return (
 		<ConfigProvider locale={zhCN}>
 			<Router>
-				<Routes>
-					<Route
-						path="/"
-						element={<Navigate to="/checkout" replace />}
-					/>
-					<Route
-						path="/checkout"
-						element={
-							<AppLayout>
-								<CheckoutPage />
-							</AppLayout>
-						}
-					/>
-					<Route
-						path="/products"
-						element={
-							<AppLayout>
-								<ProductsPage />
-							</AppLayout>
-						}
-					/>
-					<Route
-						path="/statistics"
-						element=<AppLayout>
-							<StatisticsPage />
-						</AppLayout>
-					/>
-					<Route
-						path="/orders"
-						element=<AppLayout>
-							<OrdersPage />
-						</AppLayout>
-					/>
-				</Routes>
+				<AppLayout>
+					<Routes>
+						<Route
+							path="/"
+							element={<Navigate to="/checkout" replace />}
+						/>
+						<Route path="/checkout" element={<CheckoutPage />} />
+						<Route path="/products" element={<ProductsPage />} />
+						<Route
+							path="/statistics"
+							element={<StatisticsPage />}
+						/>
+						<Route path="/orders" element={<OrdersPage />} />
+					</Routes>
+				</AppLayout>
 			</Router>
 		</ConfigProvider>
 	);
