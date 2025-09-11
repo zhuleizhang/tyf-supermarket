@@ -504,7 +504,7 @@ const StatisticsPage: React.FC = () => {
 					<Col span={24}>
 						<Card title="销售趋势" style={{ height: 400 }}>
 							{salesTrendData.length > 0 ? (
-								<ResponsiveContainer width="100%" height="100%">
+								<ResponsiveContainer width="100%" height={300}>
 									<AreaChart
 										data={salesTrendData}
 										margin={{
