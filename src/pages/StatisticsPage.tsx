@@ -13,6 +13,7 @@ import {
 } from 'antd';
 import { DatePicker } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
+import { productService, orderService } from '../db';
 import {
   AreaChart,
   Area,
@@ -37,16 +38,20 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   orderId: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 interface Product {
   id: string;
   name: string;
-  category: string;
+  category?: string;
   price: number;
   stock: number;
   image?: string;
+  barcode?: string;
+  unit?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ProductRankingItem {
@@ -98,12 +103,8 @@ const StatisticsPage: React.FC = () => {
   // 加载商品数据
   const loadProducts = useCallback(async () => {
     try {
-      const response = await fetch('/api/products');
-      if (!response.ok) {
-        throw new Error('Failed to load products');
-      }
-      const data = await response.json();
-      setProducts(data);
+      const { list } = await productService.getAll();
+      setProducts(list);
     } catch (err) {
       console.error('Error loading products:', err);
       setError('加载商品数据失败');
@@ -123,14 +124,17 @@ const StatisticsPage: React.FC = () => {
       const startDate = dateRange[0].startOf('day').format('YYYY-MM-DD HH:mm:ss');
       const endDate = dateRange[1].endOf('day').format('YYYY-MM-DD HH:mm:ss');
       
-      const response = await fetch(`/api/orders/items?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+      // 获取日期范围内的所有订单
+      const ordersInRange = await orderService.getByDateRange(startDate, endDate);
       
-      if (!response.ok) {
-        throw new Error('Failed to load orders');
+      // 获取这些订单的所有订单项
+      const allOrderItems: OrderItem[] = [];
+      for (const order of ordersInRange) {
+        const items = await orderService.getOrderItems(order.id);
+        allOrderItems.push(...items);
       }
       
-      const data = await response.json();
-      setOrderItems(data);
+      setOrderItems(allOrderItems);
     } catch (err) {
       console.error('Error loading orders:', err);
       setError('加载订单数据失败');
@@ -199,11 +203,16 @@ const StatisticsPage: React.FC = () => {
 
   // 生成商品销售排行数据
   const generateProductRankingData = useCallback((items: OrderItem[], productList: Product[]) => {
-    const productMap = new Map<string, { salesQuantity: number; salesAmount: number; productName?: string; category?: string }>();
+    const productMap = new Map<string, { salesQuantity: number; salesAmount: number; productName: string; category: string }>();
+
+    // 构建商品ID到商品信息的映射，提高查找效率
+    const productIdMap = new Map(productList.map(product => [product.id, product]));
 
     // 聚合每个商品的销售数据和商品信息
     items.forEach((item) => {
-      const product = productList.find((p) => p.id === item.productId);
+      // 从映射中快速查找商品信息
+      const product = productIdMap.get(item.productId);
+      // 优先使用完整的商品信息，其次是订单项中的信息，最后是默认值
       const productName = product?.name || item.productName || '未知商品';
       const category = product?.category || item.category || '未分类';
 
@@ -212,8 +221,8 @@ const StatisticsPage: React.FC = () => {
         productMap.set(item.productId, {
           salesQuantity: data.salesQuantity + item.quantity,
           salesAmount: data.salesAmount + item.unitPrice * item.quantity,
-          productName: data.productName || productName,
-          category: data.category || category,
+          productName: productName, // 直接使用最新获取的名称，避免旧值覆盖新值
+          category: category, // 直接使用最新获取的分类
         });
       } else {
         productMap.set(item.productId, {
@@ -225,7 +234,7 @@ const StatisticsPage: React.FC = () => {
       }
     });
 
-    // 转换为数组
+    // 转换为数组并确保所有数据完整
     const rankingData: ProductRankingItem[] = Array.from(productMap.entries()).map(
       ([productId, data]) => ({
         productId,
@@ -374,7 +383,7 @@ const StatisticsPage: React.FC = () => {
       
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50">
-          <Spin size="large" tip="数据加载中..." />
+          <Spin size="large" />
         </div>
       )}
       

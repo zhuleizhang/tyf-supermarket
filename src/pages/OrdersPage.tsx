@@ -242,22 +242,22 @@ const OrdersPage: React.FC = () => {
 						编辑
 					</Button>
 					<Popconfirm
-						title="确定要将这个订单标记为已删除吗？"
-						onConfirm={() => handleDelete(record.id)}
-						okText="确定"
-						cancelText="取消"
-					>
-						<Button type="link" danger icon={<DeleteOutlined />}>
-							删除
-						</Button>
-					</Popconfirm>
+				  title="确定要将这个订单标记为已删除吗？"
+				  onConfirm={() => handleDelete(record.id)}
+				  okText="确定"
+				  cancelText="取消"
+				>
+					<Button type="link" danger icon={<DeleteOutlined />}>
+						删除
+					</Button>
+				</Popconfirm>
 				</Space>
 			),
 		},
 	];
 
 	return (
-		<div className="p-4 bg-gray-50 min-h-screen">
+		<div className="p-4 bg-white min-h-screen">
 			<div className="mb-4 flex justify-between items-center">
 				<h1 className="text-2xl font-bold">订单管理</h1>
 				<Input
@@ -381,6 +381,16 @@ const OrdersPage: React.FC = () => {
 										<span className="text-gray-500 text-xs">
 											修改后请点击确定按钮保存
 										</span>
+										<Popconfirm
+										  title="确定要删除这个商品吗？"
+										  onConfirm={() => removeOrderItem(index)}
+										  okText="确定"
+										  cancelText="取消"
+										>
+											<Button type="link" danger icon={<DeleteOutlined />}>
+												删除
+											</Button>
+										</Popconfirm>
 									</div>
 								))}
 
