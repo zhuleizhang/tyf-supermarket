@@ -131,7 +131,12 @@ const StatisticsPage: React.FC = () => {
       const allOrderItems: OrderItem[] = [];
       for (const order of ordersInRange) {
         const items = await orderService.getOrderItems(order.id);
-        allOrderItems.push(...items);
+        // 为每个订单项添加订单的createdAt日期
+        const itemsWithDate = items.map(item => ({
+          ...item,
+          createdAt: item.createdAt || order.createdAt
+        }));
+        allOrderItems.push(...itemsWithDate);
       }
       
       setOrderItems(allOrderItems);
@@ -175,7 +180,8 @@ const StatisticsPage: React.FC = () => {
 
     // 按日期聚合数据
     items.forEach((item) => {
-      const date = dayjs(item.createdAt).format('YYYY-MM-DD');
+      // 使用订单日期作为后备选项
+      const date = item.createdAt ? dayjs(item.createdAt).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
       
       if (dateMap.has(date)) {
         const data = dateMap.get(date)!;
@@ -258,7 +264,7 @@ const StatisticsPage: React.FC = () => {
     // 聚合每个分类的销售数据
     items.forEach((item) => {
       const product = productList.find((p) => p.id === item.productId);
-      const category = product?.category || '未分类';
+      const category = product?.category || item.category || '未分类';
 
       if (categoryMap.has(category)) {
         categoryMap.set(
@@ -327,7 +333,7 @@ const StatisticsPage: React.FC = () => {
   };
 
   // 处理日期范围选择
-  const handleDateChange = (dates: [Dayjs, Dayjs] | null, dateStrings: [string, string]) => {
+  const handleDateChange = (dates: [Dayjs, Dayjs] | null) => {
     // 验证日期范围是否有效
     if (dates) {
       const daysDiff = dates[1].diff(dates[0], 'day');
@@ -506,8 +512,8 @@ const StatisticsPage: React.FC = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }: any) =>
-                      `${name}: ${(percent * 100).toFixed(0)}%`
+                    label={({ category, percent }: any) =>
+                      `${category}: ${(percent * 100).toFixed(0)}%`
                     }
                     outerRadius={80}
                     fill="#8884d8"
