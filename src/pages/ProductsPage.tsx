@@ -24,7 +24,6 @@ import {
 	type Product,
 	type Category,
 } from '../db';
-import { useAppStore } from '../store';
 import { useDebounceFn } from 'ahooks';
 
 const { Option } = Select;
@@ -50,8 +49,7 @@ const ProductsPage: React.FC = () => {
 	const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
 	const [modalTitle, setModalTitle] = useState<string>('添加商品');
 
-	// 获取全局状态
-	const { searchKeyword, setSearchKeyword } = useAppStore();
+	const [searchKeyword, setSearchKeyword] = useState('');
 
 	// 表单实例
 	const [form] = Form.useForm();

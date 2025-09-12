@@ -24,7 +24,7 @@ import {
 	type Product,
 	type CreateOrderData,
 } from '../db';
-import { useAppStore } from '../store';
+import { useCartStore } from '../store';
 
 const { Title, Text } = Typography;
 
@@ -41,15 +41,15 @@ const CheckoutPage: React.FC = () => {
 	const barcodeRef = useRef<InputRef>(null);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 
-	const addToStoreCart = useAppStore((state) => state.addToCart);
-	const clearCart = useAppStore((state) => state.clearCart);
-	const updateCartItemQuantity = useAppStore(
+	const addToStoreCart = useCartStore((state) => state.addToCart);
+	const clearCart = useCartStore((state) => state.clearCart);
+	const updateCartItemQuantity = useCartStore(
 		(state) => state.updateCartItemQuantity
 	);
-	const removeFromCart = useAppStore((state) => state.removeFromCart);
-	const cartItems = useAppStore((state) => state.cartItems);
-	const cartTotalPrice = useAppStore((state) => state.totalAmount);
-	const getCartItemCount = useAppStore((state) => state.getCartItemCount);
+	const removeFromCart = useCartStore((state) => state.removeFromCart);
+	const cartItems = useCartStore((state) => state.cartItems);
+	const cartTotalPrice = useCartStore((state) => state.totalAmount);
+	const getCartItemCount = useCartStore((state) => state.getCartItemCount);
 
 	// 初始化音频
 	useEffect(() => {
