@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { Layout as AntLayout, Menu, Typography } from 'antd';
-import DataBackupRestore from './DataBackupRestore';
+import { Layout as AntLayout, Menu, Typography, Button } from 'antd';
 import {
 	ShoppingCartOutlined,
 	DatabaseOutlined,
 	BarChartOutlined,
 	ShoppingOutlined,
 	TagOutlined,
+	SettingOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -49,6 +49,11 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 			icon: <BarChartOutlined />,
 			label: '销售统计',
 		},
+		// {
+		// 	key: '/settings',
+		// 	icon: <SettingOutlined />,
+		// 	label: '系统设置',
+		// },
 	];
 
 	// 处理菜单点击
@@ -66,7 +71,14 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 					</Title>
 				</div>
 				<div className="flex items-center">
-					<DataBackupRestore />
+					<Button
+						type="text"
+						icon={<SettingOutlined />}
+						onClick={() => navigate('/settings')}
+						className="text-gray-700"
+					>
+						设置
+					</Button>
 				</div>
 			</Header>
 			<AntLayout className="bg-gray-100">

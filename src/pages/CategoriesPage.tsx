@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Input, Modal, Form, message, Tag } from 'antd';
 import {
 	PlusOutlined,
@@ -23,8 +23,8 @@ const CategoriesPage: React.FC = () => {
 	const [form] = Form.useForm();
 	const [searchKeyword, setSearchKeyword] = useState<string>('');
 
-	// 加载分类列表
-	const loadCategories = async () => {
+	// 加载分类列表 - 使用 useCallback 避免每次渲染重新创建
+	const loadCategories = useCallback(async () => {
 		setLoading(true);
 		try {
 			const allCategories = await categoryService.getAll();
@@ -47,12 +47,12 @@ const CategoriesPage: React.FC = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [searchKeyword]);
 
 	// 初始化加载
 	useEffect(() => {
 		loadCategories();
-	}, [searchKeyword]);
+	}, [searchKeyword, loadCategories]);
 
 	// 处理搜索
 	const handleSearch = (value: string) => {

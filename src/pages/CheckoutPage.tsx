@@ -25,18 +25,23 @@ import {
 	type CreateOrderData,
 } from '../db';
 import { useCartStore } from '../store';
+import { useConfigStore } from '@/store/config-store';
 
 const { Title, Text } = Typography;
 
 const CheckoutPage: React.FC = () => {
 	// 购物车状态
-	const [scanning, setScanning] = useState<boolean>(false);
 	const [barcodeInput, setBarcodeInput] = useState<string>('');
 	const [loading, setLoading] = useState<boolean>(false);
 	const [isConfirmModalVisible, setIsConfirmModalVisible] =
 		useState<boolean>(false);
 	const [confirmAmount, setConfirmAmount] = useState<string>('');
 
+	const autoEnterCheckoutModeMinutes = useConfigStore(
+		(s) => s.autoEnterCheckoutModeMinutes
+	);
+
+	const modeTimerRef = useRef<NodeJS.Timeout | null>(null);
 	// 引用
 	const barcodeRef = useRef<InputRef>(null);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -50,6 +55,8 @@ const CheckoutPage: React.FC = () => {
 	const cartItems = useCartStore((state) => state.cartItems);
 	const cartTotalPrice = useCartStore((state) => state.totalAmount);
 	const getCartItemCount = useCartStore((state) => state.getCartItemCount);
+	const scanning = useCartStore((state) => state.scanning);
+	const toggleScanning = useCartStore((state) => state.toggleScanning);
 
 	// 初始化音频
 	useEffect(() => {
@@ -90,6 +97,15 @@ const CheckoutPage: React.FC = () => {
 			barcodeRef.current.focus();
 		}
 	}, [scanning]);
+
+	useEffect(() => {
+		if (modeTimerRef.current) {
+			clearTimeout(modeTimerRef.current);
+		}
+		modeTimerRef.current = setTimeout(() => {
+			barcodeRef.current.focus();
+		}, autoEnterCheckoutModeMinutes * 60 * 1000);
+	}, [autoEnterCheckoutModeMinutes]);
 
 	// 添加商品到购物车
 	const addToCart = (product: Product, quantity: number = 1) => {
@@ -210,15 +226,6 @@ const CheckoutPage: React.FC = () => {
 		}
 	};
 
-	// 切换扫描模式
-	const toggleScanningMode = () => {
-		const newScanningState = !scanning;
-		setScanning(newScanningState);
-		if (newScanningState && barcodeRef.current) {
-			barcodeRef.current.focus();
-		}
-	};
-
 	return (
 		<div
 			className={`flex flex-col p-6 bg-white h-full rounded-lg shadow ${
@@ -230,7 +237,7 @@ const CheckoutPage: React.FC = () => {
 				<Button
 					type={scanning ? 'default' : 'primary'}
 					icon={<ScanOutlined />}
-					onClick={toggleScanningMode}
+					onClick={toggleScanning}
 				>
 					{scanning ? '退出收银模式' : '进入收银模式'}
 				</Button>

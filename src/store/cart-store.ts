@@ -14,6 +14,8 @@ export interface CartState {
 	cartItems: CartItem[];
 	totalAmount: number;
 	searchKeyword: string;
+	// 收银模式状态
+	scanning: boolean;
 
 	// 结算操作
 	addToCart: (product: Product, quantity?: number) => void;
@@ -24,6 +26,10 @@ export interface CartState {
 	// 搜索操作
 	setSearchKeyword: (keyword: string) => void;
 
+	// 收银模式操作
+	setScanning: (scanning: boolean) => void;
+	toggleScanning: () => void;
+
 	getCartItemCount: () => number;
 }
 
@@ -33,6 +39,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 	cartItems: [],
 	totalAmount: 0,
 	searchKeyword: '',
+	scanning: false,
 
 	// 向购物车添加商品
 	addToCart: (product: Product, quantity = 1) => {
@@ -141,6 +148,16 @@ export const useCartStore = create<CartState>((set, get) => ({
 	// 设置搜索关键词
 	setSearchKeyword: (keyword: string) => {
 		set({ searchKeyword: keyword });
+	},
+
+	// 设置收银模式状态
+	setScanning: (scanning: boolean) => {
+		set({ scanning });
+	},
+
+	// 切换收银模式
+	toggleScanning: () => {
+		set((state) => ({ scanning: !state.scanning }));
 	},
 
 	// 获取购物车商品总数

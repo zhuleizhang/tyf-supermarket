@@ -13,7 +13,15 @@ import CheckoutPage from './pages/CheckoutPage';
 import StatisticsPage from './pages/StatisticsPage';
 import OrdersPage from './pages/OrdersPage';
 import CategoriesPage from './pages/CategoriesPage';
+import SettingsPage from './pages/SettingsPage';
 import { initializeData } from './db/initData';
+import { useAutoTimeout } from './hooks/useAutoTimeout';
+
+// 创建一个包装组件来处理自动超时逻辑，确保在 Router 内部使用
+const AutoTimeoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+	useAutoTimeout();
+	return <>{children}</>;
+};
 
 function App() {
 	// 初始化数据
@@ -32,20 +40,23 @@ function App() {
 		<ConfigProvider locale={zhCN}>
 			<Router>
 				<AppLayout>
-					<Routes>
-						<Route
-							path="/"
-							element={<Navigate to="/checkout" replace />}
-						/>
-						<Route path="/checkout" element={<CheckoutPage />} />
-						<Route path="/products" element={<ProductsPage />} />
-				<Route path="/categories" element={<CategoriesPage />} />
-				<Route
-					path="/statistics"
-					element={<StatisticsPage />}
-				/>
-				<Route path="/orders" element={<OrdersPage />} />
-					</Routes>
+					<AutoTimeoutWrapper>
+						<Routes>
+							<Route
+								path="/"
+								element={<Navigate to="/checkout" replace />}
+							/>
+							<Route path="/checkout" element={<CheckoutPage />} />
+							<Route path="/products" element={<ProductsPage />} />
+							<Route path="/categories" element={<CategoriesPage />} />
+							<Route
+								path="/statistics"
+								element={<StatisticsPage />}
+							/>
+							<Route path="/orders" element={<OrdersPage />} />
+							<Route path="/settings" element={<SettingsPage />} />
+						</Routes>
+					</AutoTimeoutWrapper>
 				</AppLayout>
 			</Router>
 		</ConfigProvider>
