@@ -277,7 +277,8 @@ export const productService = {
 	getAll: async (
 		page = 1,
 		pageSize = 10,
-		keyword = ''
+		keyword = '',
+		category = ''
 	): Promise<{ list: Product[]; total: number }> => {
 		try {
 			// 获取所有商品数据
@@ -293,6 +294,13 @@ export const productService = {
 					(product) =>
 						product.name.toLowerCase().includes(lowerKeyword) ||
 						product.barcode.includes(keyword)
+				);
+			}
+
+			// 分类筛选
+			if (category) {
+				allProducts = allProducts.filter(
+					(product) => product.category === category
 				);
 			}
 

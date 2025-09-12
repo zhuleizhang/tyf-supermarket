@@ -42,6 +42,8 @@ const ProductsPage: React.FC = () => {
 	const [categoryMap, setCategoryMap] = useState<Map<string, string>>(
 		new Map()
 	);
+	// 分类查询状态
+	const [selectedCategory, setSelectedCategory] = useState<string>(undefined);
 
 	// 模态框状态
 	const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
@@ -85,10 +87,20 @@ const ProductsPage: React.FC = () => {
 	}, [products.length]);
 
 	// 加载商品列表
-	const loadProducts = async (page = 1, pageSize = 10, keyword = '') => {
+	const loadProducts = async (
+		page = 1,
+		pageSize = 10,
+		keyword = '',
+		category = ''
+	) => {
 		setLoading(true);
 		try {
-			const result = await productService.getAll(page, pageSize, keyword);
+			const result = await productService.getAll(
+				page,
+				pageSize,
+				keyword,
+				category
+			);
 			setProducts(result.list);
 			setTotal(result.total);
 		} catch (error: any) {
@@ -99,10 +111,16 @@ const ProductsPage: React.FC = () => {
 		}
 	};
 
+	// 处理分类选择变化
+	const handleCategoryChange = (value: string) => {
+		setSelectedCategory(value);
+		setCurrentPage(1); // 选择分类时重置到第一页
+	};
+
 	// 初始化加载
 	useEffect(() => {
-		loadProducts(currentPage, pageSize, searchKeyword);
-	}, [currentPage, pageSize, searchKeyword]);
+		loadProducts(currentPage, pageSize, searchKeyword, selectedCategory);
+	}, [currentPage, pageSize, searchKeyword, selectedCategory]);
 
 	// 处理搜索
 	const handleSearch = (value: string) => {
@@ -140,6 +158,7 @@ const ProductsPage: React.FC = () => {
 	const handleSubmit = async () => {
 		try {
 			const values = await form.validateFields();
+			let newPage = currentPage;
 
 			if (currentProduct) {
 				// 更新商品
@@ -149,11 +168,12 @@ const ProductsPage: React.FC = () => {
 				// 添加商品
 				await productService.add(values);
 				message.success('商品添加成功');
+				newPage = 1;
 			}
 
 			// 关闭模态框并刷新列表
 			setIsModalVisible(false);
-			loadProducts(currentPage, pageSize, searchKeyword);
+			loadProducts(newPage, pageSize, searchKeyword, selectedCategory);
 		} catch (error) {
 			message.error(currentProduct ? '商品更新失败' : '商品添加失败');
 		}
@@ -171,7 +191,12 @@ const ProductsPage: React.FC = () => {
 					const success = await productService.delete(productId);
 					if (success) {
 						message.success('商品删除成功');
-						loadProducts(currentPage, pageSize, searchKeyword);
+						loadProducts(
+							currentPage,
+							pageSize,
+							searchKeyword,
+							selectedCategory
+						);
 					} else {
 						message.error('商品删除失败');
 					}
@@ -282,9 +307,22 @@ const ProductsPage: React.FC = () => {
 						allowClear
 						enterButton={<SearchOutlined />}
 						onSearch={handleSearch}
-						style={{ width: 400 }}
+						style={{ width: 300 }}
 						onChange={(e) => handleSearchDebounced(e.target.value)}
 					/>
+					<Select
+						placeholder="请选择分类"
+						style={{ width: 180, marginRight: '10px' }}
+						value={selectedCategory}
+						onChange={handleCategoryChange}
+						allowClear
+					>
+						{categories.map((category) => (
+							<Option key={category.id} value={category.id}>
+								{category.name}
+							</Option>
+						))}
+					</Select>
 					<Button
 						type="primary"
 						icon={<PlusOutlined />}
@@ -328,11 +366,10 @@ const ProductsPage: React.FC = () => {
 				<Form
 					form={form}
 					layout="vertical"
-					initialValues={
-						{
-							// price: 0,
-						}
-					}
+					initialValues={{
+						// price: 0,
+						unit: '个',
+					}}
 				>
 					<Form.Item
 						label="商品名称"
@@ -389,7 +426,7 @@ const ProductsPage: React.FC = () => {
 					</Form.Item>
 
 					<Form.Item label="商品分类" name="category">
-						<Select placeholder="请选择商品分类">
+						<Select placeholder="请选择商品分类" allowClear>
 							{categories.map((category) => (
 								<Option key={category.id} value={category.id}>
 									{category.name}
