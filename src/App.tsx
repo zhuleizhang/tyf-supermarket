@@ -12,6 +12,7 @@ import ProductsPage from './pages/ProductsPage';
 import CheckoutPage from './pages/CheckoutPage';
 import StatisticsPage from './pages/StatisticsPage';
 import OrdersPage from './pages/OrdersPage';
+import CategoriesPage from './pages/CategoriesPage';
 import { initializeData } from './db/initData';
 
 function App() {
@@ -38,11 +39,12 @@ function App() {
 						/>
 						<Route path="/checkout" element={<CheckoutPage />} />
 						<Route path="/products" element={<ProductsPage />} />
-						<Route
-							path="/statistics"
-							element={<StatisticsPage />}
-						/>
-						<Route path="/orders" element={<OrdersPage />} />
+				<Route path="/categories" element={<CategoriesPage />} />
+				<Route
+					path="/statistics"
+					element={<StatisticsPage />}
+				/>
+				<Route path="/orders" element={<OrdersPage />} />
 					</Routes>
 				</AppLayout>
 			</Router>

@@ -1,10 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { Layout as AntLayout, Menu, Typography, Input } from 'antd';
+import { Layout as AntLayout, Menu, Typography } from 'antd';
 import {
 	ShoppingCartOutlined,
 	DatabaseOutlined,
 	BarChartOutlined,
 	ShoppingOutlined,
+	TagOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -30,6 +32,11 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 			key: '/products',
 			icon: <DatabaseOutlined />,
 			label: '商品管理',
+		},
+		{
+			key: '/categories',
+			icon: <TagOutlined />,
+			label: '分类管理',
 		},
 		{
 			key: '/orders',

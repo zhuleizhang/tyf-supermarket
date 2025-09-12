@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useState, useEffect } from 'react';
 import {
 	Table,
@@ -10,6 +12,7 @@ import {
 	Space,
 	Popconfirm,
 	message,
+	Tag,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -19,7 +22,6 @@ import {
 } from '@ant-design/icons';
 import { orderService, productService } from '../db';
 import type { Order, OrderItem, Product } from '../db';
-import { useAppStore } from '../store';
 
 const OrdersPage: React.FC = () => {
 	const [orders, setOrders] = useState<Order[]>([]);
@@ -27,7 +29,6 @@ const OrdersPage: React.FC = () => {
 	const [isModalVisible, setIsModalVisible] = useState(false);
 	const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 	const [form] = Form.useForm();
-	const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 	const [tempOrderItems, setTempOrderItems] = useState<OrderItem[]>([]);
 	const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 	const [orderDetailsMap, setOrderDetailsMap] = useState<
@@ -78,7 +79,6 @@ const OrdersPage: React.FC = () => {
 		// 加载订单中的商品
 		try {
 			const items = await orderService.getOrderItems(order.id);
-			setOrderItems(items);
 			setTempOrderItems([...items]); // 创建临时状态用于编辑
 			form.setFieldsValue({
 				status: order.status,
@@ -168,7 +168,6 @@ const OrdersPage: React.FC = () => {
 			message.success('订单更新成功');
 			setIsModalVisible(false);
 			setEditingOrder(null);
-			setOrderItems([]);
 			setTempOrderItems([]);
 		} catch (error) {
 			message.error('保存订单失败');
@@ -220,6 +219,27 @@ const OrdersPage: React.FC = () => {
 			title: '订单状态',
 			dataIndex: 'status',
 			key: 'status',
+			render: (status: string) => {
+				let color = 'blue';
+				let text = status;
+
+				switch (status) {
+					case 'completed':
+						color = 'success';
+						text = '已完成';
+						break;
+					case 'pending':
+						color = 'warning';
+						text = '待处理';
+						break;
+					case 'cancelled':
+						color = 'error';
+						text = '已取消';
+						break;
+				}
+
+				return <Tag color={color}>{text}</Tag>;
+			},
 		},
 		{
 			title: '商品数量',
@@ -242,15 +262,15 @@ const OrdersPage: React.FC = () => {
 						编辑
 					</Button>
 					<Popconfirm
-				  title="确定要将这个订单标记为已删除吗？"
-				  onConfirm={() => handleDelete(record.id)}
-				  okText="确定"
-				  cancelText="取消"
-				>
-					<Button type="link" danger icon={<DeleteOutlined />}>
-						删除
-					</Button>
-				</Popconfirm>
+						title="确定要将这个订单标记为已删除吗？"
+						onConfirm={() => handleDelete(record.id)}
+						okText="确定"
+						cancelText="取消"
+					>
+						<Button type="link" danger icon={<DeleteOutlined />}>
+							删除
+						</Button>
+					</Popconfirm>
 				</Space>
 			),
 		},
@@ -285,7 +305,6 @@ const OrdersPage: React.FC = () => {
 				onCancel={() => {
 					setIsModalVisible(false);
 					setEditingOrder(null);
-					setOrderItems([]);
 					setTempOrderItems([]);
 					form.resetFields();
 				}}
@@ -325,9 +344,11 @@ const OrdersPage: React.FC = () => {
 										className="flex items-center space-x-4 p-2 border-b"
 									>
 										<Select
-											style={{ width: 200 }}
+											style={{ minWidth: 200, flex: 1 }}
 											placeholder="选择商品"
 											value={tempItem.productId}
+											showSearch
+											optionFilterProp="label"
 											onChange={(value) =>
 												updateOrderItem(
 													index,
@@ -377,17 +398,19 @@ const OrdersPage: React.FC = () => {
 												2
 											)}
 										</span>
-
-										<span className="text-gray-500 text-xs">
-											修改后请点击确定按钮保存
-										</span>
 										<Popconfirm
-										  title="确定要删除这个商品吗？"
-										  onConfirm={() => removeOrderItem(index)}
-										  okText="确定"
-										  cancelText="取消"
+											title="确定要删除这个商品吗？"
+											onConfirm={() =>
+												removeOrderItem(index)
+											}
+											okText="确定"
+											cancelText="取消"
 										>
-											<Button type="link" danger icon={<DeleteOutlined />}>
+											<Button
+												type="link"
+												danger
+												icon={<DeleteOutlined />}
+											>
 												删除
 											</Button>
 										</Popconfirm>

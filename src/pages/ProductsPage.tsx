@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import {
 	Table,
@@ -16,22 +18,17 @@ import {
 	DeleteOutlined,
 	EditOutlined,
 } from '@ant-design/icons';
-import { productService, type Product } from '../db';
+import {
+	productService,
+	categoryService,
+	type Product,
+	type Category,
+} from '../db';
 import { useAppStore } from '../store';
+import { useDebounceFn } from 'ahooks';
 
 const { Option } = Select;
 const { Search } = Input;
-
-// 商品分类选项
-const productCategories = [
-	'饮料',
-	'零食',
-	'方便食品',
-	'熟食',
-	'乳制品',
-	'日用品',
-	'其他',
-];
 
 const ProductsPage: React.FC = () => {
 	const [products, setProducts] = useState<Product[]>([]);
@@ -39,6 +36,12 @@ const ProductsPage: React.FC = () => {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
+
+	// 分类相关状态
+	const [categories, setCategories] = useState<Category[]>([]);
+	const [categoryMap, setCategoryMap] = useState<Map<string, string>>(
+		new Map()
+	);
 
 	// 模态框状态
 	const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
@@ -51,6 +54,36 @@ const ProductsPage: React.FC = () => {
 	// 表单实例
 	const [form] = Form.useForm();
 
+	// 加载分类列表
+	const loadCategories = async () => {
+		try {
+			const categoryList = await categoryService.getAll();
+			setCategories(categoryList);
+
+			// 创建分类ID到名称的映射，用于快速查找
+			const map = new Map<string, string>();
+			categoryList.forEach((category) => {
+				map.set(category.id, category.name);
+			});
+			setCategoryMap(map);
+		} catch (error: any) {
+			console.log(error, 'loadCategories error');
+			message.error('加载分类列表失败');
+		}
+	};
+
+	// 初始化加载分类
+	useEffect(() => {
+		loadCategories();
+	}, []);
+
+	// 商品数据加载后，重新加载分类以确保数据一致性
+	useEffect(() => {
+		if (products.length > 0) {
+			loadCategories();
+		}
+	}, [products.length]);
+
 	// 加载商品列表
 	const loadProducts = async (page = 1, pageSize = 10, keyword = '') => {
 		setLoading(true);
@@ -58,7 +91,8 @@ const ProductsPage: React.FC = () => {
 			const result = await productService.getAll(page, pageSize, keyword);
 			setProducts(result.list);
 			setTotal(result.total);
-		} catch (error) {
+		} catch (error: any) {
+			console.log(error, 'loadProducts error');
 			message.error('加载商品列表失败');
 		} finally {
 			setLoading(false);
@@ -76,6 +110,10 @@ const ProductsPage: React.FC = () => {
 		setCurrentPage(1); // 搜索时重置到第一页
 	};
 
+	const { run: handleSearchDebounced } = useDebounceFn(handleSearch, {
+		wait: 300,
+	});
+
 	// 打开添加商品模态框
 	const showAddModal = () => {
 		setCurrentProduct(null);
@@ -92,7 +130,6 @@ const ProductsPage: React.FC = () => {
 			name: product.name,
 			barcode: product.barcode,
 			price: product.price,
-			stock: product.stock,
 			category: product.category || '',
 			unit: product.unit || '',
 		});
@@ -167,25 +204,17 @@ const ProductsPage: React.FC = () => {
 			width: 100,
 			render: (price: number) => `¥${price.toFixed(2)}`,
 		},
-		{
-			title: '库存',
-			dataIndex: 'stock',
-			key: 'stock',
-			width: 100,
-			render: (stock: number) => (
-				<span className={stock < 10 ? 'text-red-500' : ''}>
-					{stock}
-				</span>
-			),
-		},
+
 		{
 			title: '分类',
 			dataIndex: 'category',
 			key: 'category',
 			width: 100,
-			render: (category?: string) =>
-				category ? (
-					<Tag color="blue">{category}</Tag>
+			render: (categoryId?: string) =>
+				categoryId ? (
+					<Tag color="blue">
+						{categoryMap.get(categoryId) || '未知分类'}
+					</Tag>
 				) : (
 					<Tag color="default">未分类</Tag>
 				),
@@ -200,16 +229,26 @@ const ProductsPage: React.FC = () => {
 			title: '创建时间',
 			dataIndex: 'createdAt',
 			key: 'createdAt',
-			width: 180,
+			width: 100,
 			render: (createdAt: string) => {
 				const date = new Date(createdAt);
 				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
 			},
 		},
 		{
+			title: '更新时间',
+			dataIndex: 'updatedAt',
+			key: 'updatedAt',
+			width: 100,
+			render: (updatedAt: string) => {
+				const date = new Date(updatedAt);
+				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+			},
+		},
+		{
 			title: '操作',
 			key: 'action',
-			width: 150,
+			width: 160,
 			fixed: 'right' as const,
 			render: (_: any, record: Product) => (
 				<span>
@@ -242,15 +281,14 @@ const ProductsPage: React.FC = () => {
 						placeholder="搜索商品名称或条码"
 						allowClear
 						enterButton={<SearchOutlined />}
-						size="large"
 						onSearch={handleSearch}
-						style={{ width: 300 }}
+						style={{ width: 400 }}
+						onChange={(e) => handleSearchDebounced(e.target.value)}
 					/>
 					<Button
 						type="primary"
 						icon={<PlusOutlined />}
 						onClick={showAddModal}
-						size="large"
 					>
 						添加商品
 					</Button>
@@ -290,10 +328,11 @@ const ProductsPage: React.FC = () => {
 				<Form
 					form={form}
 					layout="vertical"
-					initialValues={{
-						price: 0,
-						stock: 0,
-					}}
+					initialValues={
+						{
+							// price: 0,
+						}
+					}
 				>
 					<Form.Item
 						label="商品名称"
@@ -349,31 +388,11 @@ const ProductsPage: React.FC = () => {
 						/>
 					</Form.Item>
 
-					<Form.Item
-						label="商品库存"
-						name="stock"
-						rules={[
-							{ required: true, message: '请输入商品库存' },
-							{
-								type: 'number',
-								min: 0,
-								message: '库存不能为负数',
-							},
-						]}
-					>
-						<InputNumber
-							className="w-full"
-							placeholder="请输入商品库存"
-							min={0}
-							step={1}
-						/>
-					</Form.Item>
-
 					<Form.Item label="商品分类" name="category">
 						<Select placeholder="请选择商品分类">
-							{productCategories.map((category) => (
-								<Option key={category} value={category}>
-									{category}
+							{categories.map((category) => (
+								<Option key={category.id} value={category.id}>
+									{category.name}
 								</Option>
 							))}
 						</Select>

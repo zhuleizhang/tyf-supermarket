@@ -1,14 +1,26 @@
-import { productService } from './index';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { productService, categoryService } from './index';
 import { isProduction } from '../config';
 
-// 初始商品数据
+// 初始分类数据
+const initialCategories = [
+	{ name: '饮料' },
+	{ name: '零食' },
+	{ name: '方便食品' },
+	{ name: '熟食' },
+	{ name: '乳制品' },
+	{ name: '日用品' },
+	{ name: '其他' },
+];
+
+// 初始商品数据（使用分类名称，后续会转换为分类ID）
 const initialProducts = [
 	{
 		name: '矿泉水500ml',
 		barcode: '6901234567890',
 		price: 2.0,
 		stock: 100,
-		category: '饮料',
+		categoryName: '饮料',
 		unit: '瓶',
 	},
 	{
@@ -16,7 +28,7 @@ const initialProducts = [
 		barcode: '6901234567891',
 		price: 3.0,
 		stock: 80,
-		category: '饮料',
+		categoryName: '饮料',
 		unit: '罐',
 	},
 	{
@@ -24,7 +36,7 @@ const initialProducts = [
 		barcode: '6901234567892',
 		price: 5.5,
 		stock: 60,
-		category: '方便食品',
+		categoryName: '方便食品',
 		unit: '桶',
 	},
 	{
@@ -32,7 +44,7 @@ const initialProducts = [
 		barcode: '6901234567893',
 		price: 4.5,
 		stock: 50,
-		category: '零食',
+		categoryName: '零食',
 		unit: '袋',
 	},
 	{
@@ -40,7 +52,7 @@ const initialProducts = [
 		barcode: '6901234567894',
 		price: 4.0,
 		stock: 40,
-		category: '饮料',
+		categoryName: '饮料',
 		unit: '瓶',
 	},
 	{
@@ -48,7 +60,7 @@ const initialProducts = [
 		barcode: '6901234567895',
 		price: 2.5,
 		stock: 70,
-		category: '熟食',
+		categoryName: '熟食',
 		unit: '根',
 	},
 	{
@@ -56,7 +68,7 @@ const initialProducts = [
 		barcode: '6901234567896',
 		price: 8.0,
 		stock: 30,
-		category: '零食',
+		categoryName: '零食',
 		unit: '盒',
 	},
 	{
@@ -64,7 +76,7 @@ const initialProducts = [
 		barcode: '6901234567897',
 		price: 3.5,
 		stock: 60,
-		category: '乳制品',
+		categoryName: '乳制品',
 		unit: '盒',
 	},
 	{
@@ -72,7 +84,7 @@ const initialProducts = [
 		barcode: '6901234567898',
 		price: 25.0,
 		stock: 20,
-		category: '日用品',
+		categoryName: '日用品',
 		unit: '瓶',
 	},
 	{
@@ -80,7 +92,7 @@ const initialProducts = [
 		barcode: '6901234567899',
 		price: 15.0,
 		stock: 25,
-		category: '日用品',
+		categoryName: '日用品',
 		unit: '袋',
 	},
 ];
@@ -102,22 +114,60 @@ export const initializeData = async (): Promise<void> => {
 			return;
 		}
 
-		console.log('开始初始化商品数据...');
+		console.log('开始初始化数据...');
 
-		// 批量添加初始商品
+		// 1. 初始化分类数据
+		console.log('初始化分类数据...');
+		const categoryMap = new Map<string, string>(); // 存储分类名称到ID的映射
+		for (const category of initialCategories) {
+			// 检查分类是否已存在
+			const existingCategory = await categoryService.getByName(
+				category.name
+			);
+			if (!existingCategory) {
+				const newCategory = await categoryService.add(category);
+				categoryMap.set(category.name, newCategory.id);
+				console.log(
+					`创建分类: ${category.name}, ID: ${newCategory.id}`
+				);
+			} else {
+				categoryMap.set(category.name, existingCategory.id);
+			}
+		}
+
+		// 2. 初始化商品数据，使用分类ID
+		console.log('初始化商品数据...');
 		for (const product of initialProducts) {
 			// 检查商品是否已存在
 			const existingProduct = await productService.getByBarcode(
 				product.barcode
 			);
 			if (!existingProduct) {
-				await productService.add(product);
+				// 获取分类ID
+				const categoryId = categoryMap.get(product.categoryName);
+				if (categoryId) {
+					// 创建商品时使用分类ID
+					const productWithCategoryId = {
+						...product,
+						category: categoryId,
+					};
+					// 删除临时字段categoryName
+					delete (productWithCategoryId as any).categoryName;
+					await productService.add(productWithCategoryId);
+					console.log(
+						`创建商品: ${product.name}, 分类ID: ${categoryId}`
+					);
+				} else {
+					console.warn(
+						`商品 ${product.name} 的分类 ${product.categoryName} 不存在，跳过创建`
+					);
+				}
 			}
 		}
 
 		// 标记数据已初始化
 		await localStorage.setItem('dataInitialized', 'true');
-		console.log('商品数据初始化完成');
+		console.log('数据初始化完成');
 	} catch (error) {
 		console.error('初始化数据失败:', error);
 	}

@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { DatePicker } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
-import { productService, orderService } from '../db';
+import { productService, orderService, categoryService } from '../db';
 import {
 	AreaChart,
 	Area,
@@ -26,10 +26,12 @@ import {
 	PieChart,
 	Pie,
 	Cell,
+	Legend,
+	BarChart,
+	Bar,
 } from 'recharts';
 
 const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 interface OrderItem {
 	id: string;
@@ -55,6 +57,14 @@ interface Product {
 	updatedAt?: string;
 }
 
+interface Category {
+	id: string;
+	name: string;
+	description?: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
 interface ProductRankingItem {
 	productId: string;
 	productName: string;
@@ -67,6 +77,11 @@ interface CategorySalesItem {
 	category: string;
 	salesAmount: number;
 	value: number;
+}
+
+interface HourlySalesItem {
+	hour: string;
+	salesAmount: number;
 }
 
 interface SalesTrendItem {
@@ -89,6 +104,7 @@ const StatisticsPage: React.FC = () => {
 	]);
 	const [selectedProduct, setSelectedProduct] = useState<string>('all');
 	const [products, setProducts] = useState<Product[]>([]);
+	const [categories, setCategories] = useState<Category[]>([]); // 添加分类状态
 	const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 	const [statistics, setStatistics] = useState<StatisticsData>({
 		totalSales: 0,
@@ -104,6 +120,9 @@ const StatisticsPage: React.FC = () => {
 	>([]);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
+	const [hourlySalesData, setHourlySalesData] = useState<HourlySalesItem[]>(
+		[]
+	);
 
 	// 加载商品数据
 	const loadProducts = useCallback(async () => {
@@ -117,6 +136,18 @@ const StatisticsPage: React.FC = () => {
 		}
 	}, []);
 
+	// 加载分类数据
+	const loadCategories = useCallback(async () => {
+		try {
+			const categoryList = await categoryService.getAll();
+			setCategories(categoryList);
+		} catch (err) {
+			console.error('Error loading categories:', err);
+			setError('加载分类数据失败');
+			message.error('加载分类数据失败');
+		}
+	}, []);
+
 	// 加载订单数据
 	const loadOrders = useCallback(async () => {
 		if (!dateRange || !dateRange[0] || !dateRange[1]) return;
@@ -126,18 +157,22 @@ const StatisticsPage: React.FC = () => {
 
 		try {
 			// 调整日期范围为开始时间的0点和结束时间的23:59:59
-			const startDate = dateRange[0]
-				.startOf('day')
-				.format('YYYY-MM-DD HH:mm:ss');
-			const endDate = dateRange[1]
-				.endOf('day')
-				.format('YYYY-MM-DD HH:mm:ss');
+			const startDate = dateRange[0].startOf('day').toISOString();
+			const endDate = dateRange[1].endOf('day').toISOString();
+
+			console.log(
+				'Loading orders for date range:',
+				startDate,
+				'to',
+				endDate
+			);
 
 			// 获取日期范围内的所有订单
 			const ordersInRange = await orderService.getByDateRange(
 				startDate,
 				endDate
 			);
+			console.log(ordersInRange, 'ordersInRange');
 
 			// 获取这些订单的所有订单项
 			const allOrderItems: OrderItem[] = [];
@@ -151,6 +186,7 @@ const StatisticsPage: React.FC = () => {
 				allOrderItems.push(...itemsWithDate);
 			}
 
+			console.log('Loaded order items:', allOrderItems.length);
 			setOrderItems(allOrderItems);
 		} catch (err) {
 			console.error('Error loading orders:', err);
@@ -250,7 +286,18 @@ const StatisticsPage: React.FC = () => {
 				// 优先使用完整的商品信息，其次是订单项中的信息，最后是默认值
 				const productName =
 					product?.name || item.productName || '未知商品';
-				const category = product?.category || item.category || '未分类';
+
+				// 获取分类名称（而不是分类ID）
+				let category = '未分类';
+				if (product && product.category) {
+					// 尝试查找分类名称
+					const categoryObj = categories.find(
+						(c) => c.id === product.category
+					);
+					category = categoryObj?.name || product.category;
+				} else if (item.category) {
+					category = item.category;
+				}
 
 				if (productMap.has(item.productId)) {
 					const data = productMap.get(item.productId)!;
@@ -258,7 +305,7 @@ const StatisticsPage: React.FC = () => {
 						salesQuantity: data.salesQuantity + item.quantity,
 						salesAmount:
 							data.salesAmount + item.unitPrice * item.quantity,
-						productName: productName, // 直接使用最新获取的名称，避免旧值覆盖新值
+						productName: productName, // 直接使用最新获取的名称
 						category: category, // 直接使用最新获取的分类
 					});
 				} else {
@@ -287,7 +334,7 @@ const StatisticsPage: React.FC = () => {
 				.sort((a, b) => b.salesQuantity - a.salesQuantity)
 				.slice(0, 10);
 		},
-		[]
+		[categories] // 添加categories作为依赖
 	);
 
 	// 生成分类销售数据
@@ -300,16 +347,30 @@ const StatisticsPage: React.FC = () => {
 				const product = productList.find(
 					(p) => p.id === item.productId
 				);
-				const category = product?.category || item.category || '未分类';
 
-				if (categoryMap.has(category)) {
+				// 获取分类名称（而不是分类ID）
+				let categoryName = '未分类';
+				if (product && product.category) {
+					// 尝试查找分类名称
+					const categoryObj = categories.find(
+						(c) => c.id === product.category
+					);
+					categoryName = categoryObj?.name || product.category;
+				} else if (item.category) {
+					categoryName = item.category;
+				}
+
+				if (categoryMap.has(categoryName)) {
 					categoryMap.set(
-						category,
-						categoryMap.get(category)! +
+						categoryName,
+						categoryMap.get(categoryName)! +
 							item.unitPrice * item.quantity
 					);
 				} else {
-					categoryMap.set(category, item.unitPrice * item.quantity);
+					categoryMap.set(
+						categoryName,
+						item.unitPrice * item.quantity
+					);
 				}
 			});
 
@@ -324,8 +385,37 @@ const StatisticsPage: React.FC = () => {
 
 			return categoryData;
 		},
-		[]
+		[categories] // 添加categories作为依赖
 	);
+
+	// 生成每小时销售额数据
+	const generateHourlySalesData = useCallback((items: OrderItem[]) => {
+		const hourlyMap = new Map<string, number>();
+
+		// 初始化0-23点的销售额为0
+		for (let i = 0; i < 24; i++) {
+			const hourKey = `${i.toString().padStart(2, '0')}:00`;
+			hourlyMap.set(hourKey, 0);
+		}
+
+		// 统计每个小时的销售额
+		items.forEach((item) => {
+			// 使用订单日期作为后备选项
+			const date = item.createdAt ? dayjs(item.createdAt) : dayjs();
+			const hourKey = `${date.hour().toString().padStart(2, '0')}:00`;
+			const currentSales = hourlyMap.get(hourKey) || 0;
+			hourlyMap.set(
+				hourKey,
+				currentSales + item.unitPrice * item.quantity
+			);
+		});
+
+		// 转换为数组并返回
+		return Array.from(hourlyMap.entries()).map(([hour, salesAmount]) => ({
+			hour,
+			salesAmount,
+		}));
+	}, []);
 
 	// 过滤订单数据
 	const filterOrderItems = useCallback(
@@ -340,9 +430,7 @@ const StatisticsPage: React.FC = () => {
 
 	// 处理数据更新
 	useEffect(() => {
-		if (orderItems.length === 0 || products.length === 0) return;
-
-		const filteredItems = filterOrderItems(orderItems);
+		const filteredItems = filterOrderItems(orderItems || []);
 
 		// 更新统计数据
 		setStatistics(calculateStatistics(filteredItems));
@@ -359,27 +447,33 @@ const StatisticsPage: React.FC = () => {
 		setCategorySalesData(
 			generateCategorySalesData(filteredItems, products)
 		);
+
+		// 更新每小时销售额数据
+		setHourlySalesData(generateHourlySalesData(filteredItems));
 	}, [
 		orderItems,
 		products,
+		selectedProduct, // 添加selectedProduct作为依赖
 		filterOrderItems,
 		calculateStatistics,
 		generateSalesTrendData,
 		generateProductRankingData,
 		generateCategorySalesData,
+		generateHourlySalesData,
 	]);
 
 	// 处理日期范围变更
 	useEffect(() => {
+		// 确保dateRange始终有效
 		if (dateRange && dateRange[0] && dateRange[1]) {
 			loadOrders();
 		}
 	}, [dateRange, loadOrders]);
 
-	// 初始化加载商品数据
+	// 初始化加载商品和分类数据
 	useEffect(() => {
-		loadProducts();
-	}, [loadProducts]);
+		Promise.all([loadProducts(), loadCategories()]);
+	}, [loadProducts, loadCategories]);
 
 	// 处理商品选择变更
 	const handleProductChange = (value: string) => {
@@ -395,9 +489,17 @@ const StatisticsPage: React.FC = () => {
 				message.warning('日期范围不能超过1年');
 				return;
 			}
+			setDateRange(dates);
 		}
-		setDateRange(dates);
+		// 禁止清空日期范围，保持当前日期范围不变
 	};
+
+	// 当products或categories加载完成后，重新加载订单数据以确保数据完整性
+	// useEffect(() => {
+	// 	if (products.length > 0 && categories.length > 0) {
+	// 		loadOrders();
+	// 	}
+	// }, [products.length, categories.length, loadOrders]);
 
 	// 商品销售排行表格列配置
 	const rankingColumns = [
@@ -431,8 +533,16 @@ const StatisticsPage: React.FC = () => {
 	];
 
 	// 饼图颜色
-	const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a78bfa'];
-	console.log(salesTrendData, 'salesTrendData');
+	const COLORS = [
+		'#0088FE',
+		'#00C49F',
+		'#FFBB28',
+		'#FF8042',
+		'#a78bfa',
+		'#f59e0b',
+		'#ec4899',
+		'#8b5cf6',
+	];
 
 	return (
 		<Spin size="large" spinning={loading}>
@@ -443,63 +553,88 @@ const StatisticsPage: React.FC = () => {
 					</div>
 				)}
 
-				<div className="mb-6">
-					<h1 className="text-2xl font-bold mb-4">销售统计</h1>
+				<div className="mb-4 flex justify-between items-center">
+					<h1 className="text-xl font-bold">销售统计</h1>
 					<Space>
-						<RangePicker
-							value={dateRange}
-							onChange={handleDateChange}
-							style={{ width: 300 }}
-						/>
-						<Select
-							style={{ width: 200 }}
-							placeholder="选择商品"
-							value={selectedProduct}
-							onChange={handleProductChange}
-						>
-							<Option value="all">全部商品</Option>
-							{products.map((product) => (
-								<Option key={product.id} value={product.id}>
-									{product.name}
-								</Option>
-							))}
-						</Select>
+						<div className="flex gap-2">
+							<RangePicker
+								value={dateRange}
+								onChange={handleDateChange}
+								style={{ width: 400 }}
+								allowClear={false}
+							/>
+							<Select
+								style={{ width: 300 }}
+								placeholder="选择商品"
+								value={selectedProduct}
+								onChange={handleProductChange}
+								showSearch
+								optionFilterProp="label"
+								options={[
+									{
+										label: '全部商品',
+										value: 'all',
+									},
+									...(products.map((p) => {
+										return {
+											label: p.name,
+											value: p.id,
+										};
+									}) || []),
+								]}
+							></Select>
+						</div>
 					</Space>
 				</div>
 
-				{/* 统计卡片 */}
+				{/* 统计卡片 - 增强显示效果 */}
 				<Row gutter={16} className="mb-6">
 					<Col span={8}>
-						<Card>
+						<Card className="shadow-lg border-l-4 border-green-500 hover:shadow-xl transition-shadow duration-300">
 							<Statistic
 								title="总销售额"
 								value={statistics.totalSales}
 								precision={2}
-								valueStyle={{ color: '#3f8600' }}
+								valueStyle={{
+									color: '#3f8600',
+									fontSize: '24px',
+									fontWeight: 'bold',
+								}}
+								prefix="¥"
 							/>
 						</Card>
 					</Col>
 					<Col span={8}>
-						<Card>
+						<Card className="shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow duration-300">
 							<Statistic
 								title="订单总数"
 								value={statistics.totalOrders}
+								valueStyle={{
+									color: '#1890ff',
+									fontSize: '24px',
+									fontWeight: 'bold',
+								}}
 							/>
 						</Card>
 					</Col>
 					<Col span={8}>
-						<Card>
+						<Card className="shadow-lg border-l-4 border-red-500 hover:shadow-xl transition-shadow duration-300">
 							<Statistic
-								title="平均订单价值"
+								title="平均订单价"
 								value={statistics.averageOrderValue}
 								precision={2}
-								valueStyle={{ color: '#cf1322' }}
+								valueStyle={{
+									color: '#cf1322',
+									fontSize: '24px',
+									fontWeight: 'bold',
+								}}
+								prefix="¥"
 							/>
 						</Card>
 					</Col>
 				</Row>
 
-				{/* 销售趋势图表 */}
+				{/* 销售趋势和分类销售统计 - 同一行显示 */}
 				<Row gutter={16} className="mb-6">
 					<Col span={24}>
 						<Card title="销售趋势" style={{ height: 400 }}>
@@ -555,24 +690,46 @@ const StatisticsPage: React.FC = () => {
 					</Col>
 				</Row>
 
-				{/* 商品销售排行和分类销售统计 */}
-				<Row gutter={16}>
-					<Col span={16}>
-						<Card title="商品销售排行（前10名）">
-							{productRankingData.length > 0 ? (
-								<Table
-									columns={rankingColumns}
-									dataSource={productRankingData}
-									rowKey="productId"
-									pagination={false}
-								/>
+				{/* 每小时销售额分布 */}
+				<Row gutter={16} className="mb-6">
+					<Col span={24}>
+						<Card title="每小时销售额分布" style={{ height: 400 }}>
+							{hourlySalesData.length > 0 ? (
+								<ResponsiveContainer width="100%" height={300}>
+									<BarChart
+										data={hourlySalesData}
+										margin={{
+											top: 10,
+											right: 30,
+											left: 0,
+											bottom: 0,
+										}}
+									>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="hour" />
+										<YAxis />
+										<Tooltip
+											formatter={(value: number) =>
+												`¥${value.toFixed(2)}`
+											}
+										/>
+										<Bar
+											dataKey="salesAmount"
+											fill="#82ca9d"
+											name="销售额"
+										/>
+									</BarChart>
+								</ResponsiveContainer>
 							) : (
-								<Empty description="暂无销售数据" />
+								<Empty description="暂无每小时销售数据" />
 							)}
 						</Card>
 					</Col>
-					<Col span={8}>
-						<Card title="分类销售统计">
+				</Row>
+
+				<Row gutter={16} className="mb-6">
+					<Col span={24}>
+						<Card title="分类销售统计" style={{ height: 400 }}>
 							{categorySalesData.length > 0 ? (
 								<ResponsiveContainer width="100%" height={300}>
 									<PieChart>
@@ -580,7 +737,7 @@ const StatisticsPage: React.FC = () => {
 											data={categorySalesData}
 											cx="50%"
 											cy="50%"
-											labelLine={false}
+											labelLine={true}
 											label={({
 												category,
 												percent,
@@ -591,7 +748,8 @@ const StatisticsPage: React.FC = () => {
 											}
 											outerRadius={80}
 											fill="#8884d8"
-											dataKey="value"
+											dataKey="salesAmount"
+											nameKey="category"
 										>
 											{categorySalesData.map(
 												(entry, index) => (
@@ -608,12 +766,39 @@ const StatisticsPage: React.FC = () => {
 											)}
 										</Pie>
 										<Tooltip
-											formatter={(value: any) =>
-												`¥${Number(value).toFixed(2)}`
-											}
+											formatter={(
+												value: number,
+												name: string,
+												props: any
+											) => {
+												// 直接从props中获取当前项的数据，而不是通过value查找
+												const data = props.payload;
+												return `¥${data.salesAmount.toFixed(
+													2
+												)}`;
+											}}
 										/>
+										<Legend />
 									</PieChart>
 								</ResponsiveContainer>
+							) : (
+								<Empty description="暂无分类销售数据" />
+							)}
+						</Card>
+					</Col>
+				</Row>
+
+				{/* 商品销售排行 */}
+				<Row gutter={16} className="mb-6">
+					<Col span={24}>
+						<Card title="商品销售排行（前10名）">
+							{productRankingData.length > 0 ? (
+								<Table
+									columns={rankingColumns}
+									dataSource={productRankingData}
+									rowKey="productId"
+									pagination={false}
+								/>
 							) : (
 								<Empty description="暂无销售数据" />
 							)}

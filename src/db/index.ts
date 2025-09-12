@@ -14,6 +14,13 @@ export interface Product {
 	updatedAt: string;
 }
 
+export interface Category {
+	id: string;
+	name: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface OrderItem {
 	id: string;
 	orderId: string;
@@ -77,6 +84,192 @@ const orderItemsStore = localforage.createInstance({
 	name: 'SupermarketPriceSystem',
 	storeName: 'order_items',
 });
+
+const categoriesStore = localforage.createInstance({
+	name: 'SupermarketPriceSystem',
+	storeName: 'categories',
+});
+
+// 分类数据缓存
+let categoryCache: { data: Category[]; lastUpdated: number } | null = null;
+const CACHE_EXPIRE_TIME = 5 * 60 * 1000; // 5分钟缓存有效期
+
+// 清除分类缓存
+const clearCategoryCache = () => {
+	categoryCache = null;
+};
+
+// 分类操作服务
+export const categoryService = {
+	// 获取所有分类
+	getAll: async (): Promise<Category[]> => {
+		try {
+			// 检查缓存是否有效
+			const now = Date.now();
+			if (
+				categoryCache &&
+				now - categoryCache.lastUpdated < CACHE_EXPIRE_TIME
+			) {
+				return [...categoryCache.data];
+			}
+
+			const categories: Category[] = [];
+			await categoriesStore.iterate((value) => {
+				categories.push(value as Category);
+			});
+
+			// 按创建时间排序（升序）
+			categories.sort(
+				(a, b) =>
+					new Date(a.createdAt).getTime() -
+					new Date(b.createdAt).getTime()
+			);
+
+			// 更新缓存
+			categoryCache = { data: categories, lastUpdated: now };
+
+			return categories;
+		} catch (error) {
+			console.error('获取分类列表失败:', error);
+			return [];
+		}
+	},
+
+	// 通过ID获取分类
+	getById: async (id: string): Promise<Category | null> => {
+		try {
+			const category = (await categoriesStore.getItem(
+				id
+			)) as Category | null;
+			return category;
+		} catch (error) {
+			console.error('通过ID查询分类失败:', error);
+			return null;
+		}
+	},
+
+	// 通过名称获取分类
+	getByName: async (name: string): Promise<Category | null> => {
+		try {
+			let category: Category | null = null;
+			await categoriesStore.iterate((value) => {
+				if ((value as Category).name === name) {
+					category = value as Category;
+					return true; // 中断迭代
+				}
+			});
+			return category;
+		} catch (error) {
+			console.error('通过名称查询分类失败:', error);
+			return null;
+		}
+	},
+
+	// 添加分类
+	add: async (
+		category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>
+	): Promise<Category> => {
+		try {
+			// 检查分类名称是否已存在
+			const existingCategory = await categoryService.getByName(
+				category.name
+			);
+			if (existingCategory) {
+				throw new Error('分类名称已存在');
+			}
+
+			const now = new Date();
+			const newCategory: Category = {
+				...category,
+				id: Date.now().toString(), // 生成唯一ID
+				// 使用上海时间
+				createdAt: now.toLocaleString('zh-CN', {
+					timeZone: 'Asia/Shanghai',
+				}),
+				updatedAt: now.toLocaleString('zh-CN', {
+					timeZone: 'Asia/Shanghai',
+				}),
+			};
+
+			await categoriesStore.setItem(newCategory.id, newCategory);
+			// 清除缓存，下次获取时重新加载
+			clearCategoryCache();
+			return newCategory;
+		} catch (error) {
+			console.error('添加分类失败:', error);
+			throw error;
+		}
+	},
+
+	// 更新分类
+	update: async (
+		id: string,
+		categoryData: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>
+	): Promise<Category> => {
+		try {
+			const existingCategory = (await categoriesStore.getItem(
+				id
+			)) as Category | null;
+			if (!existingCategory) {
+				throw new Error('分类不存在');
+			}
+
+			// 如果更新了名称，检查新名称是否已存在
+			if (
+				categoryData.name &&
+				categoryData.name !== existingCategory.name
+			) {
+				const existingByName = await categoryService.getByName(
+					categoryData.name
+				);
+				if (existingByName) {
+					throw new Error('分类名称已存在');
+				}
+			}
+
+			const updatedCategory: Category = {
+				...existingCategory,
+				...categoryData,
+				updatedAt: new Date().toLocaleString('zh-CN', {
+					timeZone: 'Asia/Shanghai',
+				}),
+			};
+
+			await categoriesStore.setItem(id, updatedCategory);
+			// 清除缓存，下次获取时重新加载
+			clearCategoryCache();
+			return updatedCategory;
+		} catch (error) {
+			console.error('更新分类失败:', error);
+			throw error;
+		}
+	},
+
+	// 删除分类
+	delete: async (id: string): Promise<boolean> => {
+		try {
+			// 检查是否有商品使用此分类
+			const products = (await productService.getAll(1, 1000)).list;
+			const hasProducts = products.some(
+				(product) => product.category && product.category === id
+			);
+			if (hasProducts) {
+				throw new Error('该分类下还有商品，无法删除');
+			}
+
+			await categoriesStore.removeItem(id);
+			// 清除缓存，下次获取时重新加载
+			clearCategoryCache();
+			return true;
+		} catch (error) {
+			console.error('删除分类失败:', error);
+			throw error;
+		}
+	},
+
+	// 清除分类缓存
+	clearCache: clearCategoryCache,
+};
 
 // 商品操作服务
 export const productService = {
@@ -144,6 +337,16 @@ export const productService = {
 		product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>
 	): Promise<Product> => {
 		try {
+			// 验证分类ID是否存在
+			if (product.category) {
+				const category = await categoryService.getById(
+					product.category
+				);
+				if (!category) {
+					throw new Error('分类不存在');
+				}
+			}
+
 			const now = new Date();
 			const newProduct: Product = {
 				...product,
@@ -176,6 +379,16 @@ export const productService = {
 			)) as Product | null;
 			if (!existingProduct) {
 				throw new Error('商品不存在');
+			}
+
+			// 验证分类ID是否存在
+			if (productData.category) {
+				const category = await categoryService.getById(
+					productData.category
+				);
+				if (!category) {
+					throw new Error('分类不存在');
+				}
 			}
 
 			const updatedProduct: Product = {
