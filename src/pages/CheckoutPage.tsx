@@ -360,7 +360,10 @@ const CheckoutPage: React.FC = () => {
 							</div>
 							<div className="flex justify-between text-lg">
 								<Text>总金额:</Text>
-								<Text strong className="text-red-600">
+								<Text
+									strong
+									className="text-red-600 text-xl font-bold"
+								>
 									¥{cartTotalPrice.toFixed(2)}
 								</Text>
 							</div>

@@ -70,22 +70,22 @@ localforage.config({
 });
 
 // 为不同的数据类型创建单独的存储实例
-const productsStore = localforage.createInstance({
+export const productsStore = localforage.createInstance({
 	name: 'SupermarketPriceSystem',
 	storeName: 'products',
 });
 
-const ordersStore = localforage.createInstance({
+export const ordersStore = localforage.createInstance({
 	name: 'SupermarketPriceSystem',
 	storeName: 'orders',
 });
 
-const orderItemsStore = localforage.createInstance({
+export const orderItemsStore = localforage.createInstance({
 	name: 'SupermarketPriceSystem',
 	storeName: 'order_items',
 });
 
-const categoriesStore = localforage.createInstance({
+export const categoriesStore = localforage.createInstance({
 	name: 'SupermarketPriceSystem',
 	storeName: 'categories',
 });
@@ -95,9 +95,12 @@ let categoryCache: { data: Category[]; lastUpdated: number } | null = null;
 const CACHE_EXPIRE_TIME = 5 * 60 * 1000; // 5分钟缓存有效期
 
 // 清除分类缓存
-const clearCategoryCache = () => {
+export const clearCategoryCache = () => {
 	categoryCache = null;
 };
+
+// 导出备份恢复功能
+export * from './backupRestore';
 
 // 分类操作服务
 export const categoryService = {
@@ -162,6 +165,27 @@ export const categoryService = {
 		} catch (error) {
 			console.error('通过名称查询分类失败:', error);
 			return null;
+		}
+	},
+
+	/** 恢复分类数据 */
+	recover: async (category: Category): Promise<Category> => {
+		try {
+			// 检查分类名称是否已存在
+			const existingCategory = await categoryService.getByName(
+				category.name
+			);
+			if (existingCategory) {
+				throw new Error('分类名称已存在');
+			}
+
+			await categoriesStore.setItem(category.id, category);
+			// 清除缓存，下次获取时重新加载
+			clearCategoryCache();
+			return category;
+		} catch (error) {
+			console.error('添加分类失败:', error);
+			throw error;
 		}
 	},
 
@@ -249,7 +273,7 @@ export const categoryService = {
 	delete: async (id: string): Promise<boolean> => {
 		try {
 			// 检查是否有商品使用此分类
-			const products = (await productService.getAll(1, 1000)).list;
+			const products = (await productService.getAll()).list;
 			const hasProducts = products.some(
 				(product) => product.category && product.category === id
 			);
@@ -274,7 +298,26 @@ export const categoryService = {
 // 商品操作服务
 export const productService = {
 	// 获取所有商品
-	getAll: async (
+	getAll: async (): Promise<{ list: Product[]; total: number }> => {
+		try {
+			// 获取所有商品数据
+			const allProducts: Product[] = [];
+			await productsStore.iterate((value) => {
+				allProducts.push(value as Product);
+			});
+
+			// 分页处理
+			const total = allProducts.length;
+
+			return { list: allProducts, total };
+		} catch (error) {
+			console.error('获取商品列表失败:', error);
+			return { list: [], total: 0 };
+		}
+	},
+
+	/** 分页获取商品列表 */
+	getProductList: async (
 		page = 1,
 		pageSize = 10,
 		keyword = '',
@@ -311,6 +354,9 @@ export const productService = {
 					new Date(a.createdAt).getTime()
 			);
 
+			if (pageSize === Infinity) {
+				pageSize = allProducts.length;
+			}
 			// 分页处理
 			const total = allProducts.length;
 			const startIndex = (page - 1) * pageSize;
@@ -337,6 +383,29 @@ export const productService = {
 		} catch (error) {
 			console.error('通过条码查询商品失败:', error);
 			return null;
+		}
+	},
+
+	/** 恢复商品数据 */
+	recover: async (product: Product): Promise<Product> => {
+		try {
+			// 验证分类ID是否存在
+			if (product.category) {
+				const category = await categoryService.getById(
+					product.category
+				);
+				if (!category) {
+					throw new Error('分类不存在');
+				}
+			}
+			if (!product.id) {
+				throw new Error('商品ID不存在');
+			}
+			await productsStore.setItem(product.id, product);
+			return product;
+		} catch (error) {
+			console.error('恢复商品失败:', error);
+			throw error;
 		}
 	},
 
@@ -439,6 +508,28 @@ export const productService = {
 
 // 订单操作服务
 export const orderService = {
+	/** 恢复订单 */
+	recoverOrder: async (orderData: Order): Promise<Order> => {
+		try {
+			await ordersStore.setItem(orderData.id, orderData);
+			return orderData;
+		} catch (error) {
+			console.error('恢复订单失败:', error);
+			throw error;
+		}
+	},
+
+	/** 恢复订单项 */
+	recoverOrderItem: async (orderItem: OrderItem): Promise<OrderItem> => {
+		try {
+			await orderItemsStore.setItem(orderItem.id, orderItem);
+			return orderItem;
+		} catch (error) {
+			console.error('恢复订单项失败:', error);
+			throw error;
+		}
+	},
+
 	// 创建订单
 	create: async (
 		orderData: CreateOrderData

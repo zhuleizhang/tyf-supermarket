@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Layout as AntLayout, Menu, Typography } from 'antd';
+import DataBackupRestore from './DataBackupRestore';
 import {
 	ShoppingCartOutlined,
 	DatabaseOutlined,
@@ -64,7 +65,9 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 						小型超市商品价格管理系统
 					</Title>
 				</div>
-				<div className="flex items-center w-64"></div>
+				<div className="flex items-center">
+					<DataBackupRestore />
+				</div>
 			</Header>
 			<AntLayout className="bg-gray-100">
 				{/* 侧边栏菜单 */}

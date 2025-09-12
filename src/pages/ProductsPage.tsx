@@ -95,7 +95,7 @@ const ProductsPage: React.FC = () => {
 	) => {
 		setLoading(true);
 		try {
-			const result = await productService.getAll(
+			const result = await productService.getProductList(
 				page,
 				pageSize,
 				keyword,

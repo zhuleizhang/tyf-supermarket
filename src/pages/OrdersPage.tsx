@@ -279,7 +279,7 @@ const OrdersPage: React.FC = () => {
 	return (
 		<div className="p-4 bg-white min-h-screen">
 			<div className="mb-4 flex justify-between items-center">
-				<h1 className="text-2xl font-bold">订单管理</h1>
+				<h1 className="text-xl font-bold">订单管理</h1>
 				<Input
 					placeholder="搜索订单ID或状态"
 					prefix={<SearchOutlined />}

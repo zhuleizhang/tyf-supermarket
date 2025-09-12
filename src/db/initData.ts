@@ -179,7 +179,7 @@ export const clearAllData = async (): Promise<void> => {
 		console.log('开始清除所有数据...');
 
 		// 获取所有商品
-		const { list: products } = await productService.getAll(1, 100);
+		const { list: products } = await productService.getAll();
 
 		// 删除所有商品
 		for (const product of products) {
