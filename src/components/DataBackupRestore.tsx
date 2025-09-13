@@ -18,6 +18,7 @@ const DataBackupRestore: React.FC = () => {
 		try {
 			message.loading('正在准备导出数据...');
 			await exportData();
+			message.destroy();
 			message.success('数据导出成功');
 		} catch (error) {
 			message.error(
@@ -58,6 +59,7 @@ const DataBackupRestore: React.FC = () => {
 			setUploading(true);
 			message.loading('正在导入数据...');
 			await importData(file);
+			message.destroy();
 			message.success('数据导入成功');
 		} catch (error) {
 			setUploading(false);

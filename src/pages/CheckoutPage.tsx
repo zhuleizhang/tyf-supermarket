@@ -108,9 +108,6 @@ const CheckoutPage: React.FC = () => {
 		if (modeTimerRef.current) {
 			clearTimeout(modeTimerRef.current);
 		}
-		modeTimerRef.current = setTimeout(() => {
-			barcodeRef.current.focus();
-		}, autoEnterCheckoutModeMinutes * 60 * 1000);
 	}, [autoEnterCheckoutModeMinutes]);
 
 	// 添加商品到购物车

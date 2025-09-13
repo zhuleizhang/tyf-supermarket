@@ -219,13 +219,10 @@ const CategoriesPage: React.FC = () => {
 					showTotal: (total) => `共 ${total} 个分类`,
 				}}
 				scroll={{ x: 800 }}
-				locale={{
-					emptyText: '暂无分类数据',
-				}}
 			/>
 
 			<Modal
-				visible={isModalVisible}
+				open={isModalVisible}
 				title={modalTitle}
 				okText="确定"
 				cancelText="取消"
