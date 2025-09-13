@@ -99,6 +99,10 @@ const CheckoutPage: React.FC = () => {
 	}, [scanning]);
 
 	useEffect(() => {
+		barcodeRef.current.focus();
+	}, []);
+
+	useEffect(() => {
 		if (modeTimerRef.current) {
 			clearTimeout(modeTimerRef.current);
 		}
@@ -252,6 +256,11 @@ const CheckoutPage: React.FC = () => {
 					onKeyDown={handleKeyPress}
 					placeholder={'扫描商品条码或输入商品条码数字'}
 					size="large"
+					onBlur={() => {
+						setTimeout(() => {
+							barcodeRef.current.focus();
+						}, 1000);
+					}}
 				/>
 				<Button
 					onClick={handleBarcodeSearch}
@@ -382,6 +391,7 @@ const CheckoutPage: React.FC = () => {
 									onClick={handleClearCart}
 									className="w-full"
 									disabled={cartItems.length === 0}
+									size="large"
 								>
 									清空购物车
 								</Button>

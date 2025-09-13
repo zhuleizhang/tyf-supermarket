@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
 	Table,
 	Button,
@@ -11,6 +11,7 @@ import {
 	message,
 	Tag,
 	Select,
+	InputRef,
 } from 'antd';
 import {
 	PlusOutlined,
@@ -35,6 +36,8 @@ const ProductsPage: React.FC = () => {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
+
+	const barcodeAndNameInputRef = useRef<InputRef>(null);
 
 	// 分类相关状态
 	const [categories, setCategories] = useState<Category[]>([]);
@@ -83,6 +86,10 @@ const ProductsPage: React.FC = () => {
 			loadCategories();
 		}
 	}, [products.length]);
+
+	useEffect(() => {
+		barcodeAndNameInputRef.current.focus();
+	}, []);
 
 	// 加载商品列表
 	const loadProducts = async (
@@ -221,7 +228,7 @@ const ProductsPage: React.FC = () => {
 			width: 150,
 		},
 		{
-			title: '价格',
+			title: '单价',
 			dataIndex: 'price',
 			key: 'price',
 			width: 100,
@@ -303,6 +310,7 @@ const ProductsPage: React.FC = () => {
 					<Search
 						placeholder="搜索商品名称或条码"
 						allowClear
+						ref={barcodeAndNameInputRef}
 						enterButton={<SearchOutlined />}
 						onSearch={handleSearch}
 						style={{ width: 300 }}

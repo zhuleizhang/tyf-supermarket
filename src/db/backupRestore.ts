@@ -38,7 +38,7 @@ export const exportData = async (): Promise<void> => {
 		// 创建备份数据对象
 		const backupData: BackupData = {
 			version: '1.0',
-			exportTime: new Date().toISOString(),
+			exportTime: new Date().toLocaleString(),
 			categories,
 			products,
 			orders,

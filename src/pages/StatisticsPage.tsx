@@ -30,6 +30,7 @@ import {
 	BarChart,
 	Bar,
 } from 'recharts';
+import { useMemoizedFn } from 'ahooks';
 
 const { RangePicker } = DatePicker;
 
@@ -99,13 +100,13 @@ interface StatisticsData {
 const StatisticsPage: React.FC = () => {
 	// 状态管理
 	const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
-		dayjs().subtract(7, 'day').startOf('day'),
+		dayjs().subtract(6, 'day').startOf('day'),
 		dayjs().endOf('day'),
 	]);
 	const [selectedProduct, setSelectedProduct] = useState<string>('all');
 	const [products, setProducts] = useState<Product[]>([]);
 	const [categories, setCategories] = useState<Category[]>([]); // 添加分类状态
-	const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+	// const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 	const [statistics, setStatistics] = useState<StatisticsData>({
 		totalSales: 0,
 		totalOrders: 0,
@@ -148,55 +149,6 @@ const StatisticsPage: React.FC = () => {
 		}
 	}, []);
 
-	// 加载订单数据
-	const loadOrders = useCallback(async () => {
-		if (!dateRange || !dateRange[0] || !dateRange[1]) return;
-
-		setLoading(true);
-		setError(null);
-
-		try {
-			// 调整日期范围为开始时间的0点和结束时间的23:59:59
-			const startDate = dateRange[0].startOf('day').toISOString();
-			const endDate = dateRange[1].endOf('day').toISOString();
-
-			console.log(
-				'Loading orders for date range:',
-				startDate,
-				'to',
-				endDate
-			);
-
-			// 获取日期范围内的所有订单
-			const ordersInRange = await orderService.getByDateRange(
-				startDate,
-				endDate
-			);
-			console.log(ordersInRange, 'ordersInRange');
-
-			// 获取这些订单的所有订单项
-			const allOrderItems: OrderItem[] = [];
-			for (const order of ordersInRange) {
-				const items = await orderService.getOrderItems(order.id);
-				// 为每个订单项添加订单的createdAt日期
-				const itemsWithDate = items.map((item) => ({
-					...item,
-					createdAt: item.createdAt || order.createdAt,
-				}));
-				allOrderItems.push(...itemsWithDate);
-			}
-
-			console.log('Loaded order items:', allOrderItems.length);
-			setOrderItems(allOrderItems);
-		} catch (err) {
-			console.error('Error loading orders:', err);
-			setError('加载订单数据失败');
-			message.error('加载订单数据失败');
-		} finally {
-			setLoading(false);
-		}
-	}, [dateRange]);
-
 	// 计算统计数据
 	const calculateStatistics = useCallback((items: OrderItem[]) => {
 		if (!items.length) {
@@ -224,42 +176,71 @@ const StatisticsPage: React.FC = () => {
 	}, []);
 
 	// 生成销售趋势数据
-	const generateSalesTrendData = useCallback((items: OrderItem[]) => {
-		const dateMap = new Map<
-			string,
-			{ salesAmount: number; orderIds: Set<string> }
-		>();
+	const generateSalesTrendData = useCallback(
+		(items: OrderItem[], dateRange: [Dayjs, Dayjs]) => {
+			const dateMap = new Map<
+				string,
+				{ salesAmount: number; orderIds: Set<string> }
+			>();
 
-		// 按日期聚合数据
-		items.forEach((item) => {
-			// 使用订单日期作为后备选项
-			const date = item.createdAt
-				? dayjs(item.createdAt).format('YYYY-MM-DD')
-				: dayjs().format('YYYY-MM-DD');
+			const dateFormat = 'YYYY-MM-DD';
 
-			if (dateMap.has(date)) {
-				const data = dateMap.get(date)!;
-				data.salesAmount += item.unitPrice * item.quantity;
-				data.orderIds.add(item.orderId);
-			} else {
-				dateMap.set(date, {
-					salesAmount: item.unitPrice * item.quantity,
-					orderIds: new Set([item.orderId]),
-				});
+			// 按日期聚合数据
+			items.forEach((item) => {
+				// 使用订单日期作为后备选项
+				const date = item.createdAt
+					? dayjs(item.createdAt).format(dateFormat)
+					: dayjs().format(dateFormat);
+
+				if (dateMap.has(date)) {
+					const data = dateMap.get(date)!;
+					data.salesAmount += item.unitPrice * item.quantity;
+					data.orderIds.add(item.orderId);
+				} else {
+					dateMap.set(date, {
+						salesAmount: item.unitPrice * item.quantity,
+						orderIds: new Set([item.orderId]),
+					});
+				}
+			});
+
+			// 生成日期区间内的所有日期
+			const allDates: string[] = [];
+			const startDate = dateRange[0].startOf('day');
+			const endDate = dateRange[1].endOf('day');
+			let currentDate = startDate;
+
+			while (
+				currentDate.isBefore(endDate) ||
+				currentDate.isSame(endDate, 'day')
+			) {
+				allDates.push(currentDate.format(dateFormat));
+				currentDate = currentDate.add(1, 'day');
 			}
-		});
 
-		// 转换为数组并排序
-		const trendData: SalesTrendItem[] = Array.from(dateMap.entries())
-			.map(([date, data]) => ({
-				date,
-				salesAmount: data.salesAmount,
-				orderCount: data.orderIds.size,
-			}))
-			.sort((a, b) => a.date.localeCompare(b.date));
+			// 确保日期区间内的每一天都有数据，没有数据的日期填充0
+			allDates.forEach((date) => {
+				if (!dateMap.has(date)) {
+					dateMap.set(date, {
+						salesAmount: 0,
+						orderIds: new Set(),
+					});
+				}
+			});
 
-		return trendData;
-	}, []);
+			// 转换为数组并排序
+			const trendData: SalesTrendItem[] = Array.from(dateMap.entries())
+				.map(([date, data]) => ({
+					date,
+					salesAmount: data.salesAmount,
+					orderCount: data.orderIds.size,
+				}))
+				.sort((a, b) => a.date.localeCompare(b.date));
+
+			return trendData;
+		},
+		[]
+	);
 
 	// 生成商品销售排行数据
 	const generateProductRankingData = useCallback(
@@ -428,39 +409,80 @@ const StatisticsPage: React.FC = () => {
 		[selectedProduct]
 	);
 
-	// 处理数据更新
-	useEffect(() => {
-		const filteredItems = filterOrderItems(orderItems || []);
+	const handleSetData = useMemoizedFn(
+		(orderItemData: OrderItem[], dateRange: [Dayjs, Dayjs]) => {
+			const filteredItems = filterOrderItems(orderItemData || []);
 
-		// 更新统计数据
-		setStatistics(calculateStatistics(filteredItems));
+			// 更新统计数据
+			setStatistics(calculateStatistics(filteredItems));
 
-		// 更新销售趋势数据
-		setSalesTrendData(generateSalesTrendData(filteredItems));
+			// 更新销售趋势数据
+			setSalesTrendData(generateSalesTrendData(filteredItems, dateRange));
 
-		// 更新商品销售排行数据
-		setProductRankingData(
-			generateProductRankingData(filteredItems, products)
-		);
+			// 更新商品销售排行数据
+			setProductRankingData(
+				generateProductRankingData(filteredItems, products)
+			);
 
-		// 更新分类销售数据
-		setCategorySalesData(
-			generateCategorySalesData(filteredItems, products)
-		);
+			// 更新分类销售数据
+			setCategorySalesData(
+				generateCategorySalesData(filteredItems, products)
+			);
 
-		// 更新每小时销售额数据
-		setHourlySalesData(generateHourlySalesData(filteredItems));
-	}, [
-		orderItems,
-		products,
-		selectedProduct, // 添加selectedProduct作为依赖
-		filterOrderItems,
-		calculateStatistics,
-		generateSalesTrendData,
-		generateProductRankingData,
-		generateCategorySalesData,
-		generateHourlySalesData,
-	]);
+			// 更新每小时销售额数据
+			setHourlySalesData(generateHourlySalesData(filteredItems));
+		}
+	);
+
+	// 加载订单数据
+	const loadOrders = useCallback(async () => {
+		if (!dateRange || !dateRange[0] || !dateRange[1]) return;
+
+		setLoading(true);
+		setError(null);
+
+		try {
+			// 调整日期范围为开始时间的0点和结束时间的23:59:59
+			const startDate = dateRange[0].startOf('day').toISOString();
+			const endDate = dateRange[1].endOf('day').toISOString();
+
+			console.log(
+				'Loading orders for date range:',
+				startDate,
+				'to',
+				endDate
+			);
+
+			// 获取日期范围内的所有订单
+			const ordersInRange = await orderService.getByDateRange(
+				startDate,
+				endDate
+			);
+			console.log(ordersInRange, 'ordersInRange');
+
+			// 获取这些订单的所有订单项
+			const allOrderItems: OrderItem[] = [];
+			for (const order of ordersInRange) {
+				const items = await orderService.getOrderItems(order.id);
+				// 为每个订单项添加订单的createdAt日期
+				const itemsWithDate = items.map((item) => ({
+					...item,
+					createdAt: item.createdAt || order.createdAt,
+				}));
+				allOrderItems.push(...itemsWithDate);
+			}
+
+			console.log('Loaded order items:', allOrderItems.length);
+			// setOrderItems(allOrderItems);
+			handleSetData(allOrderItems, dateRange);
+		} catch (err) {
+			console.error('Error loading orders:', err);
+			setError('加载订单数据失败');
+			message.error('加载订单数据失败');
+		} finally {
+			setLoading(false);
+		}
+	}, [dateRange, handleSetData]);
 
 	// 处理日期范围变更
 	useEffect(() => {
@@ -562,6 +584,37 @@ const StatisticsPage: React.FC = () => {
 								onChange={handleDateChange}
 								style={{ width: 400 }}
 								allowClear={false}
+								presets={[
+									{
+										label: '近七天',
+										value: [
+											dayjs().subtract(6, 'day'),
+											dayjs(),
+										],
+									},
+									{
+										label: '上周',
+										value: [
+											dayjs()
+												.subtract(1, 'week')
+												.startOf('week'),
+											dayjs()
+												.subtract(1, 'week')
+												.endOf('week'),
+										],
+									},
+									{
+										label: '上个月',
+										value: [
+											dayjs()
+												.subtract(1, 'month')
+												.startOf('month'),
+											dayjs()
+												.subtract(1, 'month')
+												.endOf('month'),
+										],
+									},
+								]}
 							/>
 							<Select
 								style={{ width: 300 }}

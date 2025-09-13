@@ -7,8 +7,10 @@ const SettingsPage: React.FC = () => {
 	const {
 		autoReturnToCheckoutMinutes,
 		autoEnterCheckoutModeMinutes,
+		autoBackupDays,
 		setAutoReturnToCheckoutMinutes,
 		setAutoEnterCheckoutModeMinutes,
+		setAutoBackupDays,
 	} = useConfigStore();
 
 	// 处理自动返回收银页面时间的变化
@@ -24,6 +26,14 @@ const SettingsPage: React.FC = () => {
 		if (value >= 0) {
 			setAutoEnterCheckoutModeMinutes(value);
 			message.success('自动进入收银模式时间已更新');
+		}
+	};
+
+	// 处理自动备份天数的变化
+	const handleAutoBackupChange = (value: number) => {
+		if (value >= 0) {
+			setAutoBackupDays(value);
+			message.success('自动备份间隔已更新');
 		}
 	};
 
@@ -92,6 +102,29 @@ const SettingsPage: React.FC = () => {
 							</div>
 							<p className="text-gray-500 text-sm">
 								设置为0表示禁用此功能
+							</p>
+						</div>
+
+						{/* 自动备份设置 */}
+						<div className="flex flex-col space-y-2">
+							<label
+								id="autoBackup"
+								className="text-gray-700 font-medium"
+							>
+								每多少天自动备份一次数据
+							</label>
+							<div className="flex items-center space-x-3">
+								<InputNumber
+									id="autoBackup"
+									type="number"
+									min={0}
+									value={autoBackupDays}
+									onChange={handleAutoBackupChange}
+								/>
+								<span className="text-gray-600">天</span>
+							</div>
+							<p className="text-gray-500 text-sm">
+								设置为0表示禁用此功能，默认1天备份一次
 							</p>
 						</div>
 					</div>

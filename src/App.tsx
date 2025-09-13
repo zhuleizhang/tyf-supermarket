@@ -1,10 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-	BrowserRouter as Router,
-	Routes,
-	Route,
-	Navigate,
-} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './components/Layout';
@@ -16,6 +11,7 @@ import CategoriesPage from './pages/CategoriesPage';
 import SettingsPage from './pages/SettingsPage';
 import { initializeData } from './db/initData';
 import { useAutoTimeout } from './hooks/useAutoTimeout';
+import { useAutoBackup } from './hooks/useAutoBackup.tsx';
 
 // 创建一个包装组件来处理自动超时逻辑，确保在 Router 内部使用
 const AutoTimeoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -35,6 +31,9 @@ function App() {
 		};
 		init();
 	}, []);
+
+	// 集成自动备份功能
+	useAutoBackup();
 
 	return (
 		<ConfigProvider locale={zhCN}>
