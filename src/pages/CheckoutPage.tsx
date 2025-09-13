@@ -58,6 +58,7 @@ const CheckoutPage: React.FC = () => {
 	const getCartItemCount = useCartStore((state) => state.getCartItemCount);
 	const scanning = useCartStore((state) => state.scanning);
 	const toggleScanning = useCartStore((state) => state.toggleScanning);
+	const setScanning = useCartStore((state) => state.setScanning);
 
 	// 初始化音频
 	useEffect(() => {
@@ -230,6 +231,22 @@ const CheckoutPage: React.FC = () => {
 			setLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		// 监听 esc 按键退出扫码模式
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				setScanning(false);
+			}
+		};
+		// 添加事件监听
+		window.addEventListener('keydown', handleKeyDown);
+
+		// 组件卸载时移除事件监听
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown);
+		};
+	}, [setScanning]);
 
 	return (
 		<Page
