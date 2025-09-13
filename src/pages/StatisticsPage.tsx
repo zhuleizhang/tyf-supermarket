@@ -107,7 +107,7 @@ const StatisticsPage: React.FC = () => {
 	const [selectedProduct, setSelectedProduct] = useState<string>('all');
 	const [products, setProducts] = useState<Product[]>([]);
 	const [categories, setCategories] = useState<Category[]>([]); // 添加分类状态
-	// const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+	const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 	const [statistics, setStatistics] = useState<StatisticsData>({
 		totalSales: 0,
 		totalOrders: 0,
@@ -474,7 +474,7 @@ const StatisticsPage: React.FC = () => {
 			}
 
 			console.log('Loaded order items:', allOrderItems.length);
-			// setOrderItems(allOrderItems);
+			setOrderItems(allOrderItems);
 			handleSetData(allOrderItems, dateRange);
 		} catch (err) {
 			console.error('Error loading orders:', err);
@@ -501,28 +501,13 @@ const StatisticsPage: React.FC = () => {
 	// 处理商品选择变更
 	const handleProductChange = (value: string) => {
 		setSelectedProduct(value);
+		handleSetData(orderItems, dateRange);
 	};
 
 	// 处理日期范围选择
 	const handleDateChange = (dates: [Dayjs, Dayjs] | null) => {
-		// 验证日期范围是否有效
-		if (dates) {
-			const daysDiff = dates[1].diff(dates[0], 'day');
-			if (daysDiff > 365) {
-				message.warning('日期范围不能超过1年');
-				return;
-			}
-			setDateRange(dates);
-		}
-		// 禁止清空日期范围，保持当前日期范围不变
+		setDateRange(dates);
 	};
-
-	// 当products或categories加载完成后，重新加载订单数据以确保数据完整性
-	// useEffect(() => {
-	// 	if (products.length > 0 && categories.length > 0) {
-	// 		loadOrders();
-	// 	}
-	// }, [products.length, categories.length, loadOrders]);
 
 	// 商品销售排行表格列配置
 	const rankingColumns = [
@@ -536,21 +521,25 @@ const StatisticsPage: React.FC = () => {
 			title: '商品名称',
 			dataIndex: 'productName',
 			key: 'productName',
+			ellipsis: true,
 		},
 		{
 			title: '分类',
 			dataIndex: 'category',
 			key: 'category',
+			width: 188,
 		},
 		{
 			title: '销售数量',
 			dataIndex: 'salesQuantity',
 			key: 'salesQuantity',
+			width: 188,
 		},
 		{
 			title: '销售额',
 			dataIndex: 'salesAmount',
 			key: 'salesAmount',
+			width: 188,
 			render: (text: number) => `¥${text.toFixed(2)}`,
 		},
 	];
