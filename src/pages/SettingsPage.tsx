@@ -2,6 +2,7 @@ import React from 'react';
 import DataBackupRestore from '../components/DataBackupRestore';
 import { useConfigStore } from '../store/config-store';
 import { InputNumber, message } from 'antd';
+import Page from '@/components/Page';
 
 const SettingsPage: React.FC = () => {
 	const {
@@ -38,7 +39,7 @@ const SettingsPage: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-6">
+		<Page>
 			<div className="max-w-4xl mx-auto">
 				<h1 className="text-2xl font-bold text-gray-800 mb-6">
 					系统设置
@@ -130,7 +131,7 @@ const SettingsPage: React.FC = () => {
 					</div>
 				</div>
 			</div>
-		</div>
+		</Page>
 	);
 };
 

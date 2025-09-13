@@ -26,6 +26,7 @@ import {
 } from '../db';
 import { useCartStore } from '../store';
 import { useConfigStore } from '@/store/config-store';
+import Page from '@/components/Page';
 
 const { Title, Text } = Typography;
 
@@ -231,13 +232,13 @@ const CheckoutPage: React.FC = () => {
 	};
 
 	return (
-		<div
+		<Page
 			className={`flex flex-col p-6 bg-white h-full rounded-lg shadow ${
 				scanning ? 'absolute top-0 left-0 right-0 bottom-0' : ''
 			} transition-all duration-300`}
 		>
 			<div className="flex justify-between items-center mb-6">
-				<Title level={3}>收银结算</Title>
+				<h1 className="text-3xl font-bold">收银结算</h1>
 				<Button
 					type={scanning ? 'default' : 'primary'}
 					icon={<ScanOutlined />}
@@ -276,7 +277,7 @@ const CheckoutPage: React.FC = () => {
 			<div className="flex gap-6 flex-1 h-0">
 				{/* 购物车商品列表 */}
 				<div className="flex flex-col w-2/3">
-					<Title level={4} className="mb-4">
+					<Title level={3} className="mb-4">
 						购物车
 					</Title>
 					{cartItems.length > 0 ? (
@@ -297,6 +298,7 @@ const CheckoutPage: React.FC = () => {
 														item.quantity - 1
 													)
 												}
+												size="large"
 											/>
 										</Tooltip>,
 										<Tooltip title="点击增加数量">
@@ -309,6 +311,7 @@ const CheckoutPage: React.FC = () => {
 														item.quantity + 1
 													)
 												}
+												size="large"
 											/>
 										</Tooltip>,
 										<Tooltip title="点击移除商品">
@@ -321,6 +324,7 @@ const CheckoutPage: React.FC = () => {
 														item.product.id
 													)
 												}
+												size="large"
 											/>
 										</Tooltip>,
 									]}
@@ -328,10 +332,10 @@ const CheckoutPage: React.FC = () => {
 									<List.Item.Meta
 										title={
 											<div className="flex justify-between items-center w-full">
-												<span className="font-medium text-xl">
+												<span className="font-medium text-2xl">
 													{item.product.name}
 												</span>
-												<span className="text-xl">
+												<span className="text-3xl">
 													¥
 													{item.product.price.toFixed(
 														2
@@ -344,8 +348,9 @@ const CheckoutPage: React.FC = () => {
 												<span className="text-gray-500">
 													条码: {item.product.barcode}
 												</span>
-												<span className="font-medium">
+												<span className="font-medium text-xl">
 													数量: {item.quantity}
+													{`（${item.product.unit}）`}
 												</span>
 											</div>
 										}
@@ -366,19 +371,21 @@ const CheckoutPage: React.FC = () => {
 				{/* 结算区域 */}
 				<div className="w-1/3">
 					<div className="rounded-lg">
-						<Title level={4} className="mb-4">
+						<Title level={3} className="mb-4">
 							结算信息
 						</Title>
 						<div className="space-y-4">
-							<div className="flex justify-between text-lg">
-								<Text>商品总数:</Text>
-								<Text strong>{getCartItemCount()} 件</Text>
+							<div className="flex justify-between">
+								<Text className="text-xl">商品总数:</Text>
+								<Text strong className="text-2xl font-bold">
+									{getCartItemCount()} 件
+								</Text>
 							</div>
 							<div className="flex justify-between text-lg">
-								<Text>总金额:</Text>
+								<Text className="text-xl">总金额:</Text>
 								<Text
 									strong
-									className="text-red-600 text-xl font-bold"
+									className="text-red-600 text-3xl font-bold"
 								>
 									¥{cartTotalPrice.toFixed(2)}
 								</Text>
@@ -441,7 +448,7 @@ const CheckoutPage: React.FC = () => {
 					/>
 				</div>
 			</Modal>
-		</div>
+		</Page>
 	);
 };
 

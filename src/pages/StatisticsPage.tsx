@@ -31,6 +31,7 @@ import {
 	Bar,
 } from 'recharts';
 import { useMemoizedFn } from 'ahooks';
+import Page from '@/components/Page';
 
 const { RangePicker } = DatePicker;
 
@@ -529,7 +530,7 @@ const StatisticsPage: React.FC = () => {
 			title: '排名',
 			key: 'ranking',
 			render: (_, __, index) => index + 1,
-			width: 60,
+			width: 100,
 		},
 		{
 			title: '商品名称',
@@ -550,7 +551,7 @@ const StatisticsPage: React.FC = () => {
 			title: '销售额',
 			dataIndex: 'salesAmount',
 			key: 'salesAmount',
-			render: (text: number) => text.toFixed(2),
+			render: (text: number) => `¥${text.toFixed(2)}`,
 		},
 	];
 
@@ -567,8 +568,8 @@ const StatisticsPage: React.FC = () => {
 	];
 
 	return (
-		<Spin size="large" spinning={loading}>
-			<div className="p-4 bg-white min-h-screen">
+		<Page>
+			<Spin size="large" spinning={loading}>
 				{error && (
 					<div className="mb-4 p-4 bg-red-50 text-red-600 rounded-md">
 						{error}
@@ -617,7 +618,7 @@ const StatisticsPage: React.FC = () => {
 								]}
 							/>
 							<Select
-								style={{ width: 300 }}
+								style={{ width: 288 }}
 								placeholder="选择商品"
 								value={selectedProduct}
 								onChange={handleProductChange}
@@ -712,12 +713,12 @@ const StatisticsPage: React.FC = () => {
 											>
 												<stop
 													offset="5%"
-													stopColor="#8884d8"
+													stopColor="#82ca9d"
 													stopOpacity={0.8}
 												/>
 												<stop
 													offset="95%"
-													stopColor="#8884d8"
+													stopColor="#82ca9d"
 													stopOpacity={0}
 												/>
 											</linearGradient>
@@ -725,11 +726,15 @@ const StatisticsPage: React.FC = () => {
 										<XAxis dataKey="date" />
 										<YAxis />
 										<CartesianGrid strokeDasharray="3 3" />
-										<Tooltip />
+										<Tooltip
+											formatter={(value: number) =>
+												`¥${value.toFixed(2)}`
+											}
+										/>
 										<Area
 											type="monotone"
 											dataKey="salesAmount"
-											stroke="#8884d8"
+											stroke="#82ca9d"
 											fillOpacity={1}
 											fill="url(#colorSales)"
 											name="销售额"
@@ -858,8 +863,8 @@ const StatisticsPage: React.FC = () => {
 						</Card>
 					</Col>
 				</Row>
-			</div>
-		</Spin>
+			</Spin>
+		</Page>
 	);
 };
 

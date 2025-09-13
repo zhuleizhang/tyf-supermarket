@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
+import React, { useState } from 'react';
 import { Layout as AntLayout, Menu, Typography, Button } from 'antd';
 import {
 	ShoppingCartOutlined,
@@ -14,6 +14,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const { Header, Sider, Content } = AntLayout;
 const { Title } = Typography;
 
+const SiderCollapsedStorageKey = 'sider_collapsed';
+
 interface LayoutProps {
 	children: React.ReactNode;
 }
@@ -21,6 +23,10 @@ interface LayoutProps {
 const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
+
+	const [collapsed, setCollapsed] = useState(
+		localStorage.getItem(SiderCollapsedStorageKey) === 'true'
+	);
 
 	// 菜单项配置
 	const menuItems = [
@@ -62,12 +68,12 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 	};
 
 	return (
-		<AntLayout className="min-h-screen">
+		<AntLayout className="h-screen flex flex-col">
 			{/* 顶部导航栏 */}
 			<Header className="flex items-center justify-between bg-white shadow-sm px-6">
 				<div className="flex items-center">
 					<Title level={4} className="m-0">
-						小型超市商品价格管理系统
+						好客来超市管理系统
 					</Title>
 				</div>
 				<div className="flex items-center">
@@ -81,14 +87,23 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 					</Button>
 				</div>
 			</Header>
-			<AntLayout className="bg-gray-100">
+			<AntLayout className="bg-gray-100 flex-1 h-0 flex">
 				{/* 侧边栏菜单 */}
 				<Sider
 					width={200}
 					theme="light"
 					className="shadow-sm"
-					breakpoint="lg"
-					collapsedWidth="0"
+					// breakpoint="lg"
+					// collapsedWidth="0"
+					collapsible
+					collapsed={collapsed}
+					onCollapse={(value) => {
+						localStorage.setItem(
+							SiderCollapsedStorageKey,
+							JSON.stringify(value)
+						);
+						setCollapsed(value);
+					}}
 				>
 					<Menu
 						mode="inline"
@@ -100,7 +115,9 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 					/>
 				</Sider>
 				{/* 主内容区域 */}
-				<Content className="p-6">{children}</Content>
+				<Content className="flex-1 w-0 h-full p-6 overflow-auto">
+					{children}
+				</Content>
 			</AntLayout>
 		</AntLayout>
 	);

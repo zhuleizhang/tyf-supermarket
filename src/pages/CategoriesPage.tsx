@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import type { Category } from '../db';
 import { categoryService } from '../db';
+import Page from '@/components/Page';
 
 const { Search } = Input;
 
@@ -182,7 +183,7 @@ const CategoriesPage: React.FC = () => {
 	];
 
 	return (
-		<div className="bg-white p-4 rounded-lg shadow-sm">
+		<Page>
 			<div className="flex justify-between items-center mb-4">
 				<h1 className="text-xl font-bold text-gray-800 m-0">
 					分类管理
@@ -250,7 +251,7 @@ const CategoriesPage: React.FC = () => {
 					</Form.Item>
 				</Form>
 			</Modal>
-		</div>
+		</Page>
 	);
 };
 

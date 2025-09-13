@@ -22,6 +22,7 @@ import {
 } from '@ant-design/icons';
 import { orderService, productService } from '../db';
 import type { Order, OrderItem, Product } from '../db';
+import Page from '@/components/Page';
 
 const OrdersPage: React.FC = () => {
 	const [orders, setOrders] = useState<Order[]>([]);
@@ -277,7 +278,7 @@ const OrdersPage: React.FC = () => {
 	];
 
 	return (
-		<div className="p-4 bg-white min-h-screen">
+		<Page>
 			<div className="mb-4 flex justify-between items-center">
 				<h1 className="text-xl font-bold">订单管理</h1>
 				<Input
@@ -430,7 +431,7 @@ const OrdersPage: React.FC = () => {
 					</div>
 				</div>
 			</Modal>
-		</div>
+		</Page>
 	);
 };
 
