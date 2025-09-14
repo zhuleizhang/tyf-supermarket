@@ -2,6 +2,9 @@ const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+const getNowTimeString = () =>
+	new Date().toLocaleString().replace(/[:/\s.]/g, '-');
+
 // - macOS: ~/Library/Application Support/[应用名称]/
 // - Windows: C:\Users\[用户名]\AppData\Roaming\[应用名称]\
 // - Linux: ~/.config/[应用名称]/
@@ -73,7 +76,7 @@ function createWindow() {
 	async function loadApplication() {
 		try {
 			if (process.env.NODE_ENV === 'development') {
-				const devUrl = 'http://localhost:5174';
+				const devUrl = 'http://localhost:5173';
 				logToFile(`[Electron] 正在开发模式下加载应用: ${devUrl}`);
 
 				// 尝试加载开发服务器
@@ -171,6 +174,26 @@ function createMenu() {
 			],
 		},
 		{
+			label: '编辑',
+			submenu: [
+				{ label: '撤销', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+				{
+					label: '重做',
+					accelerator: 'Shift+CmdOrCtrl+Z',
+					role: 'redo',
+				},
+				{ type: 'separator' },
+				{ label: '剪切', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+				{ label: '复制', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+				{ label: '粘贴', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+				{
+					label: '全选',
+					accelerator: 'CmdOrCtrl+A',
+					role: 'selectAll',
+				},
+			],
+		},
+		{
 			label: '查看',
 			submenu: [
 				{
@@ -236,6 +259,7 @@ app.on('activate', function () {
 // 显示备份文件保存对话框
 ipcMain.handle('showBackupSaveDialog', async (event, options) => {
 	try {
+		logToFile(options, 'showBackupSaveDialog options');
 		const result = await dialog.showSaveDialog(mainWindow, options);
 		return result.canceled ? null : result.filePath;
 	} catch (error) {
@@ -299,8 +323,8 @@ ipcMain.handle('directBackupToFile', async (event, backupContent, filename) => {
 		}
 
 		// 生成完整的文件路径
-		const timestamp = new Date().toLocaleString().replace(/[:.]/g, '-');
-		const fileName = filename || `supermarket_backup_${timestamp}.json`;
+		const fileName =
+			filename || `supermarket_backup_${getNowTimeString()}.json`;
 		const filePath = path.join(backupDir, fileName);
 
 		// 写入备份内容

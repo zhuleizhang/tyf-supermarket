@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { getNowTimeString } from '@/utils';
 import {
 	Product,
 	Category,
@@ -56,16 +57,17 @@ export const exportData = async (): Promise<void> => {
 		) {
 			// 显示保存对话框
 			const filePath = await window.electron.showBackupSaveDialog({
-				defaultPath: `supermarket_backup_${new Date().toLocaleString().replace(/[:.]/g, '-')}.json`,
+				defaultPath: `supermarket_backup_${getNowTimeString()}.json`,
 				filters: [{ name: 'JSON Files', extensions: ['json'] }],
 			});
+			console.log(filePath, 'exportData filepath');
 
 			if (filePath) {
 				// 写入文件
 				await window.electron.writeBackupFile(filePath, jsonString);
 				console.log('数据导出成功');
 			} else {
-				console.log('用户取消了导出操作');
+				throw new Error('用户取消了导出操作');
 			}
 		} else {
 			// 浏览器环境下的回退方案
@@ -88,7 +90,7 @@ export const exportData = async (): Promise<void> => {
 		}
 	} catch (error) {
 		console.error('导出数据失败:', error);
-		throw new Error('导出数据失败，请重试');
+		throw new Error(error.message || '导出数据失败，请重试');
 	}
 };
 
