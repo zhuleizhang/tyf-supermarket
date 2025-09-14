@@ -3,7 +3,11 @@ const path = require('path');
 const fs = require('fs');
 
 const getNowTimeString = () =>
-	new Date().toLocaleString().replace(/[:/\s.]/g, '-');
+	new Date()
+		.toLocaleString('zh-CN', {
+			timeZone: 'Asia/Shanghai',
+		})
+		.replace(/[:/\s.]/g, '-');
 
 // - macOS: ~/Library/Application Support/[应用名称]/
 // - Windows: C:\Users\[用户名]\AppData\Roaming\[应用名称]\
@@ -333,6 +337,71 @@ ipcMain.handle('directBackupToFile', async (event, backupContent, filename) => {
 		return { success: true, filePath };
 	} catch (error) {
 		console.error('直接备份文件失败:', error);
+		throw error;
+	}
+});
+
+// 列出备份目录中的所有备份文件
+ipcMain.handle('listBackupFiles', async () => {
+	try {
+		// 获取应用的用户数据目录
+		const userDataPath = app.getPath('userData');
+		const backupDir = path.join(userDataPath, 'backup');
+
+		// 检查备份目录是否存在
+		if (!fs.existsSync(backupDir)) {
+			return [];
+		}
+
+		// 读取目录内容
+		const files = fs.readdirSync(backupDir);
+
+		// 只返回JSON文件，并添加文件信息
+		return (
+			files
+				.filter((file) => file.endsWith('.json'))
+				.map((file) => {
+					const filePath = path.join(backupDir, file);
+					const stats = fs.statSync(filePath);
+					return {
+						name: file,
+						path: filePath,
+						size: stats.size,
+						createdAt: stats.birthtime,
+						modifiedAt: stats.mtime,
+					};
+				})
+				// 按修改时间降序排列，最新的在前面
+				.sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime())
+		);
+	} catch (error) {
+		console.error('列出备份文件失败:', error);
+		throw error;
+	}
+});
+
+// 删除指定的备份文件
+ipcMain.handle('deleteBackupFile', async (event, filePath) => {
+	try {
+		// 获取应用的用户数据目录和备份目录路径
+		const userDataPath = app.getPath('userData');
+		const backupDir = path.join(userDataPath, 'backup');
+
+		// 确保文件路径在备份目录内，防止恶意删除其他文件
+		if (!filePath.startsWith(backupDir)) {
+			throw new Error('无效的文件路径');
+		}
+
+		// 检查文件是否存在
+		if (!fs.existsSync(filePath)) {
+			throw new Error('文件不存在');
+		}
+
+		// 删除文件
+		fs.unlinkSync(filePath);
+		return { success: true };
+	} catch (error) {
+		console.error('删除备份文件失败:', error);
 		throw error;
 	}
 });
