@@ -97,7 +97,7 @@ const ProductsPage: React.FC = () => {
 		page = 1,
 		pageSize = 10,
 		keyword = '',
-		category = ''
+		category_id = ''
 	) => {
 		setLoading(true);
 		try {
@@ -105,7 +105,7 @@ const ProductsPage: React.FC = () => {
 				page,
 				pageSize,
 				keyword,
-				category
+				category_id
 			);
 			setProducts(result.list);
 			setTotal(result.total);
@@ -154,7 +154,7 @@ const ProductsPage: React.FC = () => {
 			name: product.name,
 			barcode: product.barcode,
 			price: product.price,
-			category: product.category || '',
+			category_id: product.category_id,
 			unit: product.unit || '',
 		});
 		setIsModalVisible(true);
@@ -238,8 +238,8 @@ const ProductsPage: React.FC = () => {
 
 		{
 			title: '分类',
-			dataIndex: 'category',
-			key: 'category',
+			dataIndex: 'category_id',
+			key: 'category_id',
 			width: 100,
 			render: (categoryId?: string) =>
 				categoryId ? (
@@ -432,7 +432,7 @@ const ProductsPage: React.FC = () => {
 						/>
 					</Form.Item>
 
-					<Form.Item label="商品分类" name="category">
+					<Form.Item label="商品分类" name="category_id">
 						<Select placeholder="请选择商品分类" allowClear>
 							{categories.map((category) => (
 								<Option key={category.id} value={category.id}>

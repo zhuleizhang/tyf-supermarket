@@ -7,8 +7,7 @@ export interface Product {
 	name: string;
 	barcode: string;
 	price: number;
-	stock: number;
-	category?: string;
+	category_id?: string;
 	unit?: string;
 	createdAt: string;
 	updatedAt: string;
@@ -275,7 +274,7 @@ export const categoryService = {
 			// 检查是否有商品使用此分类
 			const products = (await productService.getAll()).list;
 			const hasProducts = products.some(
-				(product) => product.category && product.category === id
+				(product) => product.category_id && product.category_id === id
 			);
 			if (hasProducts) {
 				throw new Error('该分类下还有商品，无法删除');
@@ -321,7 +320,7 @@ export const productService = {
 		page = 1,
 		pageSize = 10,
 		keyword = '',
-		category = ''
+		category_id = ''
 	): Promise<{ list: Product[]; total: number }> => {
 		try {
 			// 获取所有商品数据
@@ -341,9 +340,9 @@ export const productService = {
 			}
 
 			// 分类筛选
-			if (category) {
+			if (category_id) {
 				allProducts = allProducts.filter(
-					(product) => product.category === category
+					(product) => product.category_id === category_id
 				);
 			}
 
@@ -389,11 +388,10 @@ export const productService = {
 	/** 恢复商品数据 */
 	recover: async (product: Product): Promise<Product> => {
 		try {
-			// 验证分类ID是否存在
-			if (product.category) {
-				const category = await categoryService.getById(
-					product.category
-				);
+			// 验证分类ID是否存在 - 支持向后兼容
+			const categoryId = product.category_id;
+			if (categoryId) {
+				const category = await categoryService.getById(categoryId);
 				if (!category) {
 					throw new Error('分类不存在');
 				}
@@ -414,11 +412,10 @@ export const productService = {
 		product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>
 	): Promise<Product> => {
 		try {
-			// 验证分类ID是否存在
-			if (product.category) {
-				const category = await categoryService.getById(
-					product.category
-				);
+			// 验证分类ID是否存在 - 支持向后兼容
+			const categoryId = product.category_id;
+			if (categoryId) {
+				const category = await categoryService.getById(categoryId);
 				if (!category) {
 					throw new Error('分类不存在');
 				}
@@ -458,11 +455,10 @@ export const productService = {
 				throw new Error('商品不存在');
 			}
 
-			// 验证分类ID是否存在
-			if (productData.category) {
-				const category = await categoryService.getById(
-					productData.category
-				);
+			// 验证分类ID是否存在 - 支持向后兼容
+			const categoryId = productData.category_id;
+			if (categoryId) {
+				const category = await categoryService.getById(categoryId);
 				if (!category) {
 					throw new Error('分类不存在');
 				}

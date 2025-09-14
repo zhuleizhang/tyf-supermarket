@@ -1,5 +1,6 @@
 import React from 'react';
 import DataBackupRestore from '../components/DataBackupRestore';
+import BulkProductCreate from '../components/BulkProductCreate';
 import { useConfigStore } from '../store/config-store';
 import { InputNumber, message } from 'antd';
 import Page from '@/components/Page';
@@ -129,6 +130,14 @@ const SettingsPage: React.FC = () => {
 							</p>
 						</div>
 					</div>
+				</div>
+
+				{/* 批量创建商品卡片 */}
+				<div className="bg-white rounded-lg shadow-md p-6">
+					<h2 className="text-xl font-semibold text-gray-700 mb-4">
+						批量创建商品
+					</h2>
+					<BulkProductCreate />
 				</div>
 			</div>
 		</Page>

@@ -59,11 +59,15 @@ export const useCartStore = create(
 								item.product.id === product.id
 									? {
 											...item,
+											product: {
+												...item.product,
+												price: product?.price,
+											},
 											quantity: item.quantity + quantity,
 											subtotal:
 												(item.quantity + quantity) *
 												product.price,
-									  }
+										}
 									: item
 							);
 

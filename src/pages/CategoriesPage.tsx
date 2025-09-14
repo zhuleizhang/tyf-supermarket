@@ -128,6 +128,13 @@ const CategoriesPage: React.FC = () => {
 	// 表格列定义
 	const columns = [
 		{
+			title: '分类ID',
+			dataIndex: 'id',
+			key: 'id',
+			ellipsis: true,
+			width: 200,
+		},
+		{
 			title: '分类名称',
 			dataIndex: 'name',
 			key: 'name',
@@ -158,7 +165,7 @@ const CategoriesPage: React.FC = () => {
 		{
 			title: '操作',
 			key: 'action',
-			width: 150,
+			width: 200,
 			fixed: 'right' as const,
 			render: (_: any, record: Category) => (
 				<span>

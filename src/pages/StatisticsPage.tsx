@@ -46,18 +46,7 @@ interface OrderItem {
 	createdAt?: string;
 }
 
-interface Product {
-	id: string;
-	name: string;
-	category?: string;
-	price: number;
-	stock: number;
-	image?: string;
-	barcode?: string;
-	unit?: string;
-	createdAt?: string;
-	updatedAt?: string;
-}
+import type { Product } from '../db/index';
 
 interface Category {
 	id: string;
@@ -104,6 +93,7 @@ const StatisticsPage: React.FC = () => {
 		dayjs().subtract(6, 'day').startOf('day'),
 		dayjs().endOf('day'),
 	]);
+	const [ready, setReady] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<string>('all');
 	const [products, setProducts] = useState<Product[]>([]);
 	const [categories, setCategories] = useState<Category[]>([]); // 添加分类状态
@@ -125,6 +115,7 @@ const StatisticsPage: React.FC = () => {
 	const [hourlySalesData, setHourlySalesData] = useState<HourlySalesItem[]>(
 		[]
 	);
+	console.log(productRankingData, 'productRankingData');
 
 	// 加载商品数据
 	const loadProducts = useCallback(async () => {
@@ -271,12 +262,12 @@ const StatisticsPage: React.FC = () => {
 
 				// 获取分类名称（而不是分类ID）
 				let category = '未分类';
-				if (product && product.category) {
+				if (product && product.category_id) {
 					// 尝试查找分类名称
 					const categoryObj = categories.find(
-						(c) => c.id === product.category
+						(c) => c.id === product.category_id
 					);
-					category = categoryObj?.name || product.category;
+					category = categoryObj?.name || product.category_id;
 				} else if (item.category) {
 					category = item.category;
 				}
@@ -332,12 +323,12 @@ const StatisticsPage: React.FC = () => {
 
 				// 获取分类名称（而不是分类ID）
 				let categoryName = '未分类';
-				if (product && product.category) {
+				if (product && product.category_id) {
 					// 尝试查找分类名称
 					const categoryObj = categories.find(
-						(c) => c.id === product.category
+						(c) => c.id === product.category_id
 					);
-					categoryName = categoryObj?.name || product.category;
+					categoryName = categoryObj?.name || product.category_id;
 				} else if (item.category) {
 					categoryName = item.category;
 				}
@@ -487,15 +478,18 @@ const StatisticsPage: React.FC = () => {
 
 	// 处理日期范围变更
 	useEffect(() => {
+		if (!ready) return;
 		// 确保dateRange始终有效
 		if (dateRange && dateRange[0] && dateRange[1]) {
 			loadOrders();
 		}
-	}, [dateRange, loadOrders]);
+	}, [dateRange, loadOrders, ready]);
 
 	// 初始化加载商品和分类数据
 	useEffect(() => {
-		Promise.all([loadProducts(), loadCategories()]);
+		Promise.all([loadProducts(), loadCategories()]).then(() => {
+			setReady(true);
+		});
 	}, [loadProducts, loadCategories]);
 
 	// 处理商品选择变更
