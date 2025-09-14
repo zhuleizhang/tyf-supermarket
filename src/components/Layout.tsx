@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { Layout as AntLayout, Menu, Typography, Button } from 'antd';
+import { Layout as AntLayout, Menu, Typography, Button, Avatar } from 'antd';
 import {
 	ShoppingCartOutlined,
 	DatabaseOutlined,
@@ -10,6 +10,7 @@ import {
 	SettingOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Logo from '@/assets/website.png';
 
 const { Header, Sider, Content } = AntLayout;
 const { Title } = Typography;
@@ -70,10 +71,11 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 	return (
 		<AntLayout className="h-screen flex flex-col">
 			{/* 顶部导航栏 */}
-			<Header className="flex items-center justify-between bg-white shadow-sm px-6">
+			<Header className="flex items-center justify-between bg-white shadow-sm px-6 pl-2">
 				<div className="flex items-center">
-					<Title level={4} className="m-0">
-						好客来超市管理系统
+					<Avatar src={Logo} size={66} />
+					<Title level={4} className="!m-0">
+						好客来超市
 					</Title>
 				</div>
 				<div className="flex items-center">

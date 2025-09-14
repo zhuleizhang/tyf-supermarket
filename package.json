@@ -23,6 +23,25 @@
     ],
     "directories": {
       "output": "release"
+    },
+    "mac": {
+      "icon": "src/assets/logo.icns",
+      "category": "public.app-category.business",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "icon": "src/assets/logo.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "icon": "src/assets/logo.icns",
+      "target": [
+        "AppImage"
+      ]
     }
   },
   "dependencies": {
