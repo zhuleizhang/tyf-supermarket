@@ -2,6 +2,9 @@ const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// 导入package.json获取版本号
+const packageJson = require(path.join(__dirname, '../package.json'));
+
 const getNowTimeString = () =>
 	new Date()
 		.toLocaleString('zh-CN', {
@@ -231,7 +234,7 @@ function createMenu() {
 					click() {
 						dialog.showMessageBox(mainWindow, {
 							title: '关于',
-							message: '小型超市商品价格管理系统\n版本: 1.0.0',
+							message: `好客来超市管理系统\n版本: ${packageJson.version}`,
 							buttons: ['确定'],
 						});
 					},

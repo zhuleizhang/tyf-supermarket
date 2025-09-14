@@ -16,6 +16,7 @@ on:
     branches: [main, master]
     paths:
       - "src/**"
+      - "electron/**"
       - "package.json"
   # pull_request:
   #   branches: [main, master]
