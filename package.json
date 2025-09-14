@@ -24,6 +24,7 @@
     "directories": {
       "output": "release"
     },
+    "publish": "never",
     "mac": {
       "icon": "src/assets/logo.icns",
       "category": "public.app-category.business",
