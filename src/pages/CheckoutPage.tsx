@@ -271,6 +271,7 @@ const CheckoutPage: React.FC = () => {
 					onKeyDown={handleKeyPress}
 					placeholder={'扫描商品条码或输入商品条码数字'}
 					size="large"
+					allowClear
 					onBlur={() => {
 						setTimeout(() => {
 							barcodeRef.current.focus();

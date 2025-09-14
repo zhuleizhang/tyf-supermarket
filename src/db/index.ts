@@ -603,13 +603,13 @@ export const orderService = {
 
 				// 根据interval生成日期键
 				if (interval === 'day') {
-					dateKey = orderDate.toISOString().split('T')[0];
+					dateKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
 				} else if (interval === 'week') {
 					// 获取本周的开始日期
 					const day = orderDate.getDay() || 7; // 将周日视为一周的第7天
 					const diff = orderDate.getDate() - day + 1;
 					const weekStart = new Date(orderDate.setDate(diff));
-					dateKey = weekStart.toISOString().split('T')[0];
+					dateKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
 				} else if (interval === 'month') {
 					dateKey = `${orderDate.getFullYear()}-${String(
 						orderDate.getMonth() + 1
@@ -687,7 +687,7 @@ export const orderService = {
 				filteredOrderIds.length > 0
 					? allOrderItems.filter((item) =>
 							filteredOrderIds.includes(item.orderId)
-					  )
+						)
 					: allOrderItems;
 
 			relevantItems.forEach((item) => {

@@ -49,22 +49,43 @@ export const exportData = async (): Promise<void> => {
 		// 转换为JSON字符串
 		const jsonString = JSON.stringify(backupData, null, 2);
 
-		// 创建Blob对象
-		const blob = new Blob([jsonString], { type: 'application/json' });
+		// 在Electron环境下，使用主进程提供的API来保存文件
+		if (
+			window.electron &&
+			typeof window.electron.showBackupSaveDialog === 'function'
+		) {
+			// 显示保存对话框
+			const filePath = await window.electron.showBackupSaveDialog({
+				defaultPath: `supermarket_backup_${new Date().toLocaleString().replace(/[:.]/g, '-')}.json`,
+				filters: [{ name: 'JSON Files', extensions: ['json'] }],
+			});
 
-		// 创建下载链接
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement('a');
-		link.href = url;
-		link.download = `supermarket_backup_${new Date().toLocaleString()}.json`;
-		document.body.appendChild(link);
+			if (filePath) {
+				// 写入文件
+				await window.electron.writeBackupFile(filePath, jsonString);
+				console.log('数据导出成功');
+			} else {
+				console.log('用户取消了导出操作');
+			}
+		} else {
+			// 浏览器环境下的回退方案
+			// 创建Blob对象
+			const blob = new Blob([jsonString], { type: 'application/json' });
 
-		// 触发下载
-		link.click();
+			// 创建下载链接
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `supermarket_backup_${new Date().toLocaleString().replace(/[:.]/g, '-')}.json`;
+			document.body.appendChild(link);
 
-		// 清理
-		document.body.removeChild(link);
-		URL.revokeObjectURL(url);
+			// 触发下载
+			link.click();
+
+			// 清理
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		}
 	} catch (error) {
 		console.error('导出数据失败:', error);
 		throw new Error('导出数据失败，请重试');
@@ -73,58 +94,66 @@ export const exportData = async (): Promise<void> => {
 
 // 从JSON文件导入数据
 export const importData = async (file: File): Promise<void> => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
+	try {
+		// let fileContent: string;
 
-		reader.onload = async (event) => {
-			try {
-				if (!event.target?.result) {
-					throw new Error('文件读取失败');
-				}
+		// 在Electron环境下，使用主进程提供的API来选择和读取文件
+		// if (
+		// 	window.electron &&
+		// 	typeof window.electron.showBackupOpenDialog === 'function'
+		// ) {
+		// 	// 显示打开对话框
+		// 	const filePath = await window.electron.showBackupOpenDialog({
+		// 		filters: [{ name: 'JSON Files', extensions: ['json'] }],
+		// 	});
 
-				// 解析JSON数据
-				const backupData: BackupData = JSON.parse(
-					event.target.result as string
-				);
+		// 	if (!filePath) {
+		// 		console.log('用户取消了导入操作');
+		// 		throw new Error('用户取消了导入操作');
+		// 	}
 
-				// 验证数据格式
-				if (!validateBackupData(backupData)) {
-					throw new Error('无效的备份文件格式');
-				}
+		// 	// 读取文件
+		// 	fileContent = await window.electron.readBackupFile(filePath);
+		// } else {
+		// 	// 读取文件内容
+		// 	fileContent = await new Promise((resolve, reject) => {
+		// 		const reader = new FileReader();
+		// 		reader.onload = (e) => resolve(e.target?.result as string);
+		// 		reader.onerror = () => reject(new Error('文件读取错误'));
+		// 		reader.readAsText(file);
+		// 	});
+		// }
 
-				// 清空现有数据
-				await clearAllData();
+		const fileContent = await new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => resolve(e.target?.result as string);
+			reader.onerror = () => reject(new Error('文件读取错误'));
+			reader.readAsText(file);
+		});
 
-				// 在导入前检查是否需要初始化数据
-				// 注意：只有在开发环境且没有导入数据时才需要初始化
-				// 由于我们已经清空了数据，这里不需要额外初始化
-				console.log(backupData, 'backupData');
+		// 解析JSON数据
+		const backupData: BackupData = JSON.parse(fileContent as string);
 
-				// 按顺序导入数据（分类->商品->订单->订单项）
-				await importCategories(backupData.categories);
-				await importProducts(backupData.products);
-				await importOrders(backupData.orders);
-				await importOrderItems(backupData.orderItems);
+		// 验证数据格式
+		if (!validateBackupData(backupData)) {
+			throw new Error('无效的备份文件格式');
+		}
 
-				resolve();
-			} catch (error) {
-				console.error('导入数据失败:', error);
-				reject(
-					new Error(
-						`导入数据失败: ${
-							error instanceof Error ? error.message : '未知错误'
-						}`
-					)
-				);
-			}
-		};
+		// 清空现有数据
+		await clearAllData();
 
-		reader.onerror = () => {
-			reject(new Error('文件读取错误'));
-		};
-
-		reader.readAsText(file);
-	});
+		// 按顺序导入数据（分类->商品->订单->订单项）
+		await importCategories(backupData.categories);
+		await importProducts(backupData.products);
+		await importOrders(backupData.orders);
+		await importOrderItems(backupData.orderItems);
+	} catch (error) {
+		console.error('导入数据失败:', error);
+		throw new Error(
+			`导入数据失败: ${error instanceof Error ? error.message : '未知错误'}
+		`
+		);
+	}
 };
 
 // 验证备份数据格式
@@ -209,3 +238,59 @@ const importOrderItems = async (orderItems: OrderItem[]): Promise<void> => {
 		}
 	}
 };
+
+// 无需用户确认的自动数据导出功能
+export const autoExportData = async (
+	filename?: string
+): Promise<{ success: boolean; filePath?: string; error?: string }> => {
+	try {
+		// 获取所有数据
+		const categories = await categoryService.getAll();
+		const productsResult = await productService.getAll();
+		const products = productsResult.list;
+		const orders = await orderService.getAllOrders();
+		const orderItems = await orderService.getAllOrderItems();
+
+		// 创建备份数据对象
+		const backupData: BackupData = {
+			version: '1.0',
+			exportTime: new Date().toLocaleString(),
+			categories,
+			products,
+			orders,
+			orderItems,
+		};
+
+		// 转换为JSON字符串
+		const jsonString = JSON.stringify(backupData, null, 2);
+
+		// 在Electron环境下，使用直接备份API
+		if (
+			window.electron &&
+			typeof window.electron.directBackupToFile === 'function'
+		) {
+			const result = await window.electron.directBackupToFile(
+				jsonString,
+				filename
+			);
+			console.log('数据自动导出成功:', result.filePath);
+			return { success: true, filePath: result.filePath };
+		} else {
+			// 在浏览器环境下，我们无法实现真正的自动导出，因为需要用户交互
+			// 这里可以选择返回错误或者回退到标准导出流程
+			console.log('无法在浏览器环境中执行自动导出，需要用户交互');
+			return {
+				success: false,
+				error: '无法在当前环境中执行自动导出，需要用户交互',
+			};
+		}
+	} catch (error) {
+		console.error('自动导出数据失败:', error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : '未知错误',
+		};
+	}
+};
+
+export {};

@@ -1,0 +1,314 @@
+const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
+const path = require('path');
+const fs = require('fs');
+
+// - macOS: ~/Library/Application Support/[应用名称]/
+// - Windows: C:\Users\[用户名]\AppData\Roaming\[应用名称]\
+// - Linux: ~/.config/[应用名称]/
+// 创建自定义日志函数
+const logToFile = (...logData) => {
+	if (process.env.NODE_ENV === 'development') {
+		console.log(logData);
+	}
+
+	try {
+		// 获取应用的用户数据目录（跨平台标准路径）
+		const userDataPath = app.getPath('userData');
+
+		// 创建logs子目录
+		const logsDir = path.join(userDataPath, 'logs');
+		if (!fs.existsSync(logsDir)) {
+			fs.mkdirSync(logsDir, { recursive: true });
+		}
+
+		// 生成日志文件名（包含日期）
+		const date = new Date();
+		const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1)
+			.toString()
+			.padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+		const logFile = path.join(logsDir, `app-${dateStr}.log`);
+
+		const logDataStringify = logData.reduce((prev, cur) => {
+			return prev + JSON.stringify(cur) + '\n';
+		}, '');
+
+		// 使用上海时间
+		// 写入日志
+		fs.appendFileSync(
+			logFile,
+			`${new Date().toLocaleString()}: ${logDataStringify}\n`
+		);
+	} catch (error) {
+		// 如果写日志本身出错，不应该影响应用运行
+		console.error('写入日志文件失败:', error);
+	}
+};
+
+let mainWindow;
+
+function createWindow() {
+	// 创建浏览器窗口
+	mainWindow = new BrowserWindow({
+		width: 1200,
+		height: 800,
+		minWidth: 1024,
+		minHeight: 768,
+		title: '小型超市商品价格管理系统',
+		webPreferences: {
+			preload: path.join(__dirname, 'preload.cjs'),
+			nodeIntegration: false,
+			contextIsolation: true,
+			webSecurity: true,
+		},
+	});
+
+	// 加载应用的index.html
+	// const startUrl =
+	// 	process.env.ELECTRON_START_URL ||
+	// 	`${path.join(__dirname, './dist/index.html')}`;
+	// mainWindow.loadURL(startUrl);
+
+	// 加载应用
+	// 在开发模式下加载开发服务器，在生产模式下加载本地HTML文件
+	async function loadApplication() {
+		try {
+			if (process.env.NODE_ENV === 'development') {
+				const devUrl = 'http://localhost:5174';
+				logToFile(`[Electron] 正在开发模式下加载应用: ${devUrl}`);
+
+				// 尝试加载开发服务器
+				await mainWindow.loadURL(devUrl);
+				logToFile('[Electron] 开发服务器加载成功');
+
+				// 确保打开开发者工具
+				mainWindow.webContents.openDevTools();
+				logToFile('[Electron] 开发者工具已打开');
+			} else {
+				const filePath = path.join(__dirname, '../dist/index.html');
+				logToFile(`[Electron] 正在生产模式下加载应用: ${filePath}`);
+				await mainWindow.loadFile(filePath);
+				logToFile('[Electron] 本地HTML文件加载成功');
+			}
+		} catch (error) {
+			console.error('[Electron] 应用加载失败:', error);
+
+			// 开发模式下的特殊错误处理
+			if (process.env.NODE_ENV === 'development') {
+				await dialog.showMessageBox(mainWindow, {
+					type: 'error',
+					title: '开发服务器错误',
+					message: '无法连接到开发服务器!',
+					detail:
+						'请确保已运行 pnpm run dev 命令启动了Vite开发服务器。\n\n错误详情:\n' +
+						error.message,
+					buttons: ['确定'],
+				});
+
+				// 在开发服务器未启动时，可以选择加载一个临时HTML页面作为替代
+				const errorHtml = `
+					<!DOCTYPE html>
+					<html>
+					<head>
+						<title>开发服务器错误</title>
+						<style>
+							body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f5f5f5; }
+							h1 { color: #e74c3c; }
+							p { color: #333; }
+						</style>
+					</head>
+					<body>
+						<h1>开发服务器未启动</h1>
+						<p>请先运行 <strong>pnpm run dev</strong> 命令启动Vite开发服务器，然后重新加载应用。</p>
+					</body>
+					</html>
+				`;
+				await mainWindow.loadURL(
+					`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`
+				);
+			} else {
+				await dialog.showMessageBox(mainWindow, {
+					type: 'error',
+					title: '应用加载错误',
+					message: '无法加载应用文件!',
+					detail: error.message,
+					buttons: ['确定'],
+				});
+				app.quit();
+			}
+		}
+	}
+
+	// 调用加载应用的函数
+	loadApplication();
+
+	// 打开开发工具（仅在开发模式下）
+	// if (process.env.ELECTRON_START_URL) {
+	// 	mainWindow.webContents.openDevTools();
+	// }
+
+	// 窗口关闭时触发
+	mainWindow.on('closed', function () {
+		mainWindow = null;
+	});
+
+	// 设置应用菜单
+	createMenu();
+}
+
+// 创建应用菜单
+function createMenu() {
+	const template = [
+		{
+			label: '文件',
+			submenu: [
+				{
+					label: '退出',
+					accelerator: 'CmdOrCtrl+Q',
+					click() {
+						app.quit();
+					},
+				},
+			],
+		},
+		{
+			label: '查看',
+			submenu: [
+				{
+					label: '刷新',
+					accelerator: 'CmdOrCtrl+R',
+					click() {
+						mainWindow.reload();
+					},
+				},
+				{
+					label: '切换全屏',
+					accelerator: 'F11',
+					click() {
+						mainWindow.setFullScreen(!mainWindow.isFullScreen());
+					},
+				},
+				{
+					label: '开发者工具',
+					accelerator: 'CmdOrCtrl+Shift+I',
+					click() {
+						mainWindow.webContents.openDevTools();
+					},
+				},
+			],
+		},
+		{
+			label: '帮助',
+			submenu: [
+				{
+					label: '关于',
+					click() {
+						dialog.showMessageBox(mainWindow, {
+							title: '关于',
+							message: '小型超市商品价格管理系统\n版本: 1.0.0',
+							buttons: ['确定'],
+						});
+					},
+				},
+			],
+		},
+	];
+
+	const menu = Menu.buildFromTemplate(template);
+	Menu.setApplicationMenu(menu);
+}
+
+// 监听应用准备就绪事件
+app.whenReady().then(createWindow);
+
+// 监听所有窗口关闭事件
+app.on('window-all-closed', function () {
+	// 在macOS上，除非用户用Cmd+Q显式退出，否则应用及其菜单栏通常会保持活动状态
+	if (process.platform !== 'darwin') app.quit();
+});
+
+// 在macOS上，当点击dock图标并且没有其他窗口打开时，通常会在应用中重新创建一个窗口
+app.on('activate', function () {
+	if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// IPC通信处理器
+
+// 显示备份文件保存对话框
+ipcMain.handle('showBackupSaveDialog', async (event, options) => {
+	try {
+		const result = await dialog.showSaveDialog(mainWindow, options);
+		return result.canceled ? null : result.filePath;
+	} catch (error) {
+		console.error('显示保存对话框失败:', error);
+		throw error;
+	}
+});
+
+// 显示备份文件打开对话框
+ipcMain.handle('showBackupOpenDialog', async (event, options) => {
+	try {
+		const result = await dialog.showOpenDialog(mainWindow, {
+			...options,
+			properties: ['openFile'],
+		});
+		return result.canceled ? null : result.filePaths[0];
+	} catch (error) {
+		console.error('显示打开对话框失败:', error);
+		throw error;
+	}
+});
+
+// 写入备份文件
+ipcMain.handle('writeBackupFile', async (event, filePath, content) => {
+	try {
+		fs.writeFileSync(filePath, content, 'utf8');
+		return true;
+	} catch (error) {
+		console.error('写入文件失败:', error);
+		throw error;
+	}
+});
+
+// 读取备份文件
+ipcMain.handle('readBackupFile', async (event, filePath) => {
+	try {
+		const content = fs.readFileSync(filePath, 'utf8');
+		return content;
+	} catch (error) {
+		console.error('读取文件失败:', error);
+		throw error;
+	}
+});
+
+// 直接备份到指定目录，无需用户确认
+ipcMain.handle('directBackupToFile', async (event, backupContent, filename) => {
+	try {
+		// 获取应用的用户数据目录
+		const userDataPath = app.getPath('userData');
+
+		// 创建backup子目录（如果不存在）
+		const backupDir = path.join(userDataPath, 'backup');
+		try {
+			fs.mkdirSync(backupDir, { recursive: true });
+		} catch (error) {
+			// 目录已存在时忽略错误
+			if (error.code !== 'EEXIST') {
+				console.error('创建备份目录失败:', error);
+				throw error;
+			}
+		}
+
+		// 生成完整的文件路径
+		const timestamp = new Date().toLocaleString().replace(/[:.]/g, '-');
+		const fileName = filename || `supermarket_backup_${timestamp}.json`;
+		const filePath = path.join(backupDir, fileName);
+
+		// 写入备份内容
+		fs.writeFileSync(filePath, backupContent, 'utf8');
+		logToFile(`[Electron] 数据已直接备份到: ${filePath}`);
+		return { success: true, filePath };
+	} catch (error) {
+		console.error('直接备份文件失败:', error);
+		throw error;
+	}
+});

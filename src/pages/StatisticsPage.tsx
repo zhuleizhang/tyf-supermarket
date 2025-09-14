@@ -444,8 +444,8 @@ const StatisticsPage: React.FC = () => {
 
 		try {
 			// 调整日期范围为开始时间的0点和结束时间的23:59:59
-			const startDate = dateRange[0].startOf('day').toISOString();
-			const endDate = dateRange[1].endOf('day').toISOString();
+			const startDate = dateRange[0].startOf('day').toLocaleString();
+			const endDate = dateRange[1].endOf('day').toLocaleString();
 
 			console.log(
 				'Loading orders for date range:',

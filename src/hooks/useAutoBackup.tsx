@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useConfigStore } from '../store/config-store';
 import { message } from 'antd';
-import { exportData } from '../db/backupRestore';
+import { autoExportData, exportData } from '../db/backupRestore';
 
 // 本地存储的键名
 const LAST_BACKUP_TIME_KEY = 'supermarket-last-backup-time';
@@ -15,10 +15,14 @@ export const useAutoBackup = () => {
 	const [lastBackupTime, setLastBackupTime] = useState<number | null>(null);
 
 	// 执行备份操作
-const performBackup = async () => {
-	try {
-		// 调用exportData方法执行备份
-		await exportData();
+	const performBackup = async () => {
+		try {
+			if (window.electron) {
+				await autoExportData();
+			} else {
+				// 调用exportData方法执行备份
+				await exportData();
+			}
 
 			// 记录备份时间
 			const currentTime = Date.now();
@@ -102,5 +106,5 @@ const performBackup = async () => {
 };
 
 // 默认导出钩子
-// eslint-disable-next-line react-hooks/rules-of-hooks
+
 export default useAutoBackup;

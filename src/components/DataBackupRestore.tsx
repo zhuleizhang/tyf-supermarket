@@ -64,9 +64,7 @@ const DataBackupRestore: React.FC = () => {
 		} catch (error) {
 			setUploading(false);
 			message.error(
-				`导入失败: ${
-					error instanceof Error ? error.message : '未知错误'
-				}`
+				`导入失败: ${error instanceof Error ? error.message : '未知错误'}`
 			);
 		}
 	};
