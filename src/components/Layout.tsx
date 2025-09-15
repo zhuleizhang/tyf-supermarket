@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import { Layout as AntLayout, Menu, Typography, Button, Avatar } from 'antd';
 import {
 	ShoppingCartOutlined,
-	DatabaseOutlined,
 	BarChartOutlined,
 	ShoppingOutlined,
 	SettingOutlined,
 	TagsOutlined,
+	ProductOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '@/assets/website.png';
@@ -38,7 +38,7 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 		},
 		{
 			key: '/products',
-			icon: <DatabaseOutlined />,
+			icon: <ProductOutlined />,
 			label: '商品管理',
 		},
 		{
