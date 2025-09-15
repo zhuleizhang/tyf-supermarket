@@ -35,26 +35,7 @@ import Page from '@/components/Page';
 
 const { RangePicker } = DatePicker;
 
-interface OrderItem {
-	id: string;
-	productId: string;
-	productName?: string;
-	category?: string;
-	quantity: number;
-	unitPrice: number;
-	orderId: string;
-	createdAt?: string;
-}
-
-import type { Product } from '../db/index';
-
-interface Category {
-	id: string;
-	name: string;
-	description?: string;
-	createdAt?: string;
-	updatedAt?: string;
-}
+import type { Category, OrderItem, Product } from '../db/index';
 
 interface ProductRankingItem {
 	productId: string;
@@ -107,6 +88,7 @@ const StatisticsPage: React.FC = () => {
 	const [productRankingData, setProductRankingData] = useState<
 		ProductRankingItem[]
 	>([]);
+
 	const [categorySalesData, setCategorySalesData] = useState<
 		CategorySalesItem[]
 	>([]);
@@ -251,14 +233,14 @@ const StatisticsPage: React.FC = () => {
 			const productIdMap = new Map(
 				productList.map((product) => [product.id, product])
 			);
+			console.log(items, 'items');
 
 			// 聚合每个商品的销售数据和商品信息
 			items.forEach((item) => {
 				// 从映射中快速查找商品信息
 				const product = productIdMap.get(item.productId);
 				// 优先使用完整的商品信息，其次是订单项中的信息，最后是默认值
-				const productName =
-					product?.name || item.productName || '未知商品';
+				const productName = product?.name || '未知商品（或商品已删除）';
 
 				// 获取分类名称（而不是分类ID）
 				let category = '未分类';
@@ -268,8 +250,6 @@ const StatisticsPage: React.FC = () => {
 						(c) => c.id === product.category_id
 					);
 					category = categoryObj?.name || product.category_id;
-				} else if (item.category) {
-					category = item.category;
 				}
 
 				if (productMap.has(item.productId)) {
@@ -329,8 +309,6 @@ const StatisticsPage: React.FC = () => {
 						(c) => c.id === product.category_id
 					);
 					categoryName = categoryObj?.name || product.category_id;
-				} else if (item.category) {
-					categoryName = item.category;
 				}
 
 				if (categoryMap.has(categoryName)) {
@@ -516,6 +494,7 @@ const StatisticsPage: React.FC = () => {
 			dataIndex: 'productName',
 			key: 'productName',
 			ellipsis: true,
+			width: 200,
 		},
 		{
 			title: '分类',
@@ -839,6 +818,7 @@ const StatisticsPage: React.FC = () => {
 									dataSource={productRankingData}
 									rowKey="productId"
 									pagination={false}
+									scroll={{ x: 'max-content' }}
 								/>
 							) : (
 								<Empty description="暂无销售数据" />

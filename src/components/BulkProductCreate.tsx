@@ -107,18 +107,21 @@ const BulkProductCreate: React.FC = () => {
 					if (
 						!productData.name ||
 						!productData.barcode ||
-						!productData.category_id
+						!productData.price
 					) {
 						result.skipped++;
 						result.skippedProducts.push({
 							product: productData,
-							reason: '缺少必填字段（名称、条码或分类）',
+							reason: '缺少必填字段（名称、条码、价格）',
 						});
 						continue;
 					}
 
 					// 验证分类是否存在
-					if (!categoryIds.has(productData.category_id)) {
+					if (
+						productData.category_id &&
+						!categoryIds.has(productData.category_id)
+					) {
 						result.skipped++;
 						result.skippedProducts.push({
 							product: productData,
@@ -228,9 +231,9 @@ const BulkProductCreate: React.FC = () => {
 	return (
 		<div className="space-y-4">
 			<Text type="secondary">
-		请上传包含商品信息的JSON文件，系统将自动验证并创建商品。
-		文件格式要求：包含一个名为products的数组，每个商品必须包含name、barcode和category_id字段。
-	</Text>
+				请上传包含商品信息的JSON文件，系统将自动验证并创建商品。
+				文件格式要求：包含一个名为products的数组，每个商品必须包含name、barcode和price字段。
+			</Text>
 
 			<Upload {...uploadProps}>
 				<Button icon={<UploadOutlined />} disabled={importing}>

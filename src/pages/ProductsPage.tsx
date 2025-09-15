@@ -279,7 +279,7 @@ const ProductsPage: React.FC = () => {
 		{
 			title: '操作',
 			key: 'action',
-			width: 160,
+			width: 200,
 			fixed: 'right' as const,
 			render: (_: any, record: Product) => (
 				<span>

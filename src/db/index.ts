@@ -27,9 +27,7 @@ export interface OrderItem {
 	quantity: number;
 	unitPrice: number;
 	subtotal: number;
-	createdAt?: string;
-	productName?: string;
-	category?: string;
+	createdAt: string;
 }
 
 export interface Order {
@@ -534,13 +532,15 @@ export const orderService = {
 			const now = new Date();
 			const orderId = Date.now().toString(); // 生成唯一订单ID
 
+			const createdAt = now.toLocaleString('zh-CN', {
+				timeZone: 'Asia/Shanghai',
+			});
+
 			// 创建订单
 			const order: Order = {
 				id: orderId,
 				totalAmount: orderData.totalAmount,
-				createdAt: now.toLocaleString('zh-CN', {
-					timeZone: 'Asia/Shanghai',
-				}),
+				createdAt: createdAt,
 				status: 'completed',
 			};
 
@@ -554,6 +554,7 @@ export const orderService = {
 				quantity: item.quantity,
 				unitPrice: item.unitPrice,
 				subtotal: item.subtotal,
+				createdAt: createdAt,
 			}));
 
 			// 保存所有订单项
