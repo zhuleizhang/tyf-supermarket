@@ -884,4 +884,57 @@ export const orderService = {
 			throw error;
 		}
 	},
+
+	// 删除超过一年的订单数据
+	deleteOldOrders: async (): Promise<{ count: number; success: boolean }> => {
+		try {
+			// 计算一年前的日期
+			const oneYearAgo = new Date();
+			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+			// 获取所有订单
+			const orders: Order[] = [];
+			await ordersStore.iterate((value) => {
+				orders.push(value as Order);
+			});
+
+			// 筛选出一年前的订单
+			const oldOrders = orders.filter(
+				(order) => new Date(order.createdAt) < oneYearAgo
+			);
+
+			if (oldOrders.length === 0) {
+				return { count: 0, success: true };
+			}
+
+			// 收集所有需要删除的订单ID
+			const orderIdsToDelete = oldOrders.map((order) => order.id);
+
+			// 获取所有订单项
+			const orderItems: OrderItem[] = [];
+			await orderItemsStore.iterate((value) => {
+				orderItems.push(value as OrderItem);
+			});
+
+			// 筛选出需要删除的订单项
+			const orderItemsToDelete = orderItems.filter((item) =>
+				orderIdsToDelete.includes(item.orderId)
+			);
+
+			// 删除订单项
+			for (const item of orderItemsToDelete) {
+				await orderItemsStore.removeItem(item.id);
+			}
+
+			// 删除订单
+			for (const orderId of orderIdsToDelete) {
+				await ordersStore.removeItem(orderId);
+			}
+
+			return { count: oldOrders.length, success: true };
+		} catch (error) {
+			console.error('删除旧订单数据失败:', error);
+			return { count: 0, success: false };
+		}
+	},
 };

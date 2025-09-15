@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useConfigStore } from '../store/config-store';
 import { message } from 'antd';
-import { autoExportData, exportData } from '../db/backupRestore';
+import { autoExportData } from '../db/backupRestore';
 
 // 本地存储的键名
 const LAST_BACKUP_TIME_KEY = 'supermarket-last-backup-time';
@@ -21,7 +21,7 @@ export const useAutoBackup = () => {
 				await autoExportData();
 			} else {
 				// 调用exportData方法执行备份
-				await exportData();
+				// await exportData();
 			}
 
 			// 记录备份时间

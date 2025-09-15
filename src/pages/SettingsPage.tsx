@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import DataBackupRestore from '../components/DataBackupRestore';
 import BulkProductCreate from '../components/BulkProductCreate';
 import { useConfigStore } from '../store/config-store';
-import { InputNumber, message, Spin } from 'antd';
+import { InputNumber, message, Spin, Progress, Modal, Button } from 'antd';
 import Page from '@/components/Page';
+import { orderService } from '../db';
+import { DeleteOutlined } from '@ant-design/icons';
 
 const SettingsPage: React.FC = () => {
 	const {
@@ -91,6 +93,63 @@ const SettingsPage: React.FC = () => {
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	// 处理删除一年前订单数据
+	const handleDeleteOldOrders = () => {
+		// 计算存储空间使用百分比
+		const usagePercentage =
+			storageInfo.quota && storageInfo.usage
+				? (storageInfo.usage / storageInfo.quota) * 100
+				: 0;
+
+		// 根据存储使用情况决定提示信息
+		let confirmMessage =
+			'此操作将删除所有超过一年的订单数据，该操作不可恢复。确定要继续吗？';
+
+		if (usagePercentage < 50) {
+			confirmMessage =
+				'当前存储空间使用情况健康，仅使用了' +
+				usagePercentage.toFixed(2) +
+				'%的空间。您确定要删除一年前的订单数据吗？';
+		}
+
+		Modal.confirm({
+			title: '删除确认',
+			content: confirmMessage,
+			okText: '确定删除',
+			cancelText: '取消',
+			okType: 'danger',
+			onOk: async () => {
+				try {
+					// 显示加载中
+					message.loading('正在删除旧订单数据...', 0);
+
+					// 执行删除操作
+					const result = await orderService.deleteOldOrders();
+
+					// 关闭加载提示
+					message.destroy();
+
+					if (result.success) {
+						if (result.count > 0) {
+							message.success(
+								`成功删除了${result.count}条一年前的订单数据`
+							);
+							// 刷新存储空间信息
+							getStorageInfo();
+						} else {
+							message.info('没有找到一年前的订单数据');
+						}
+					} else {
+						message.error('删除订单数据失败');
+					}
+				} catch (error) {
+					console.error('删除旧订单时出错:', error);
+					message.error('删除订单数据时发生错误');
+				}
+			},
+		});
 	};
 
 	// 组件加载时获取存储空间信息
@@ -274,24 +333,47 @@ const SettingsPage: React.FC = () => {
 									<label className="text-gray-700 font-medium">
 										已使用百分比
 									</label>
-									<div className="w-full bg-gray-200 rounded-full h-4">
-										<div
-											className="bg-blue-500 h-4 rounded-full"
-											style={{
-												width: `${(storageInfo.usage / storageInfo.quota) * 100}%`,
-											}}
-										></div>
-									</div>
-									<div className="text-right text-sm text-gray-500">
-										{(
-											(storageInfo.usage /
-												storageInfo.quota) *
-											100
-										).toFixed(2)}
-										%
-									</div>
+									<Progress
+										percent={parseFloat(
+											(
+												(storageInfo.usage /
+													storageInfo.quota) *
+												100
+											).toFixed(2)
+										)}
+										size="small"
+										status={
+											parseFloat(
+												(
+													(storageInfo.usage /
+														storageInfo.quota) *
+													100
+												).toFixed(2)
+											) > 80
+												? 'exception'
+												: 'normal'
+										}
+										strokeColor={{
+											'0%': '#108ee9',
+											'100%': '#ff4d4f',
+										}}
+									/>
 								</div>
 							)}
+							{/* 添加删除一年前订单数据的按钮 */}
+							<div className="mt-4 pt-4 border-t border-gray-200">
+								<Button
+									type="primary"
+									danger
+									icon={<DeleteOutlined />}
+									onClick={handleDeleteOldOrders}
+								>
+									删除一年前的订单数据
+								</Button>
+								<p className="text-gray-500 text-sm mt-2">
+									删除一年前的订单数据可以释放存储空间，但删除后数据将无法恢复
+								</p>
+							</div>
 						</div>
 					)}
 				</div>
