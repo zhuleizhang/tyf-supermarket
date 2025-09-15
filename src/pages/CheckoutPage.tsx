@@ -104,12 +104,12 @@ const CheckoutPage: React.FC = () => {
 	// 自动聚焦到条码输入框
 	useEffect(() => {
 		if (scanning && barcodeRef.current) {
-			barcodeRef.current.focus();
+			barcodeRef.current?.focus?.();
 		}
 	}, [scanning]);
 
 	useEffect(() => {
-		barcodeRef.current.focus();
+		barcodeRef.current?.focus?.();
 	}, []);
 
 	useEffect(() => {
@@ -288,7 +288,7 @@ const CheckoutPage: React.FC = () => {
 					allowClear
 					onBlur={() => {
 						setTimeout(() => {
-							barcodeRef.current.focus();
+							barcodeRef.current?.focus?.();
 						}, 1000);
 					}}
 				/>

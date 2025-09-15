@@ -12,6 +12,7 @@ import {
 	message,
 	Spin,
 } from 'antd';
+import { useConfigStore } from '../store/config-store';
 import { DatePicker } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { productService, orderService, categoryService } from '../db';
@@ -69,6 +70,11 @@ interface StatisticsData {
 }
 
 const StatisticsPage: React.FC = () => {
+	// 获取配置
+	const topSellingProductsCount = useConfigStore(
+		(state) => state.topSellingProductsCount
+	);
+
 	// 状态管理
 	const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
 		dayjs().subtract(6, 'day').startOf('day'),
@@ -97,7 +103,6 @@ const StatisticsPage: React.FC = () => {
 	const [hourlySalesData, setHourlySalesData] = useState<HourlySalesItem[]>(
 		[]
 	);
-	console.log(productRankingData, 'productRankingData');
 
 	// 加载商品数据
 	const loadProducts = useCallback(async () => {
@@ -282,12 +287,12 @@ const StatisticsPage: React.FC = () => {
 				salesAmount: data.salesAmount,
 			}));
 
-			// 按销售数量排序并取前10名
+			// 按销售数量排序并取配置的商品数量
 			return rankingData
 				.sort((a, b) => b.salesQuantity - a.salesQuantity)
-				.slice(0, 10);
+				.slice(0, topSellingProductsCount);
 		},
-		[categories] // 添加categories作为依赖
+		[categories, topSellingProductsCount] // 添加categories和topSellingProductsCount作为依赖
 	);
 
 	// 生成分类销售数据
@@ -814,7 +819,9 @@ const StatisticsPage: React.FC = () => {
 				{/* 商品销售排行 */}
 				<Row gutter={16} className="mb-6">
 					<Col span={24}>
-						<Card title="商品销售排行（前10名）">
+						<Card
+							title={`商品销售排行（前${topSellingProductsCount}名）`}
+						>
 							{productRankingData.length > 0 ? (
 								<Table
 									columns={rankingColumns}

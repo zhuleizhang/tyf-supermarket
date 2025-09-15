@@ -9,12 +9,16 @@ export interface ConfigState {
 	autoEnterCheckoutModeMinutes: number;
 	// 每多少天自动备份一次数据
 	autoBackupDays: number;
+	// 商品销售排行显示的商品数量
+	topSellingProductsCount: number;
 	// 设置自动返回收银页面的时间
 	setAutoReturnToCheckoutMinutes: (minutes: number) => void;
 	// 设置自动进入收银模式的时间
 	setAutoEnterCheckoutModeMinutes: (minutes: number) => void;
 	// 设置自动备份的天数
 	setAutoBackupDays: (days: number) => void;
+	// 设置商品销售排行显示的商品数量
+	setTopSellingProductsCount: (count: number) => void;
 }
 
 // 创建配置 store
@@ -25,6 +29,8 @@ export const useConfigStore = create<ConfigState>()(
 			autoReturnToCheckoutMinutes: 1,
 			autoEnterCheckoutModeMinutes: 1,
 			autoBackupDays: 1,
+			// 商品销售排行显示的商品数量，默认10个
+			topSellingProductsCount: 10,
 
 			// 设置自动返回收银页面的时间
 			setAutoReturnToCheckoutMinutes: (minutes: number) => {
@@ -39,6 +45,11 @@ export const useConfigStore = create<ConfigState>()(
 			// 设置自动备份的天数
 			setAutoBackupDays: (days: number) => {
 				set({ autoBackupDays: days });
+			},
+
+			// 设置商品销售排行显示的商品数量
+			setTopSellingProductsCount: (count: number) => {
+				set({ topSellingProductsCount: count });
 			},
 		}),
 		{

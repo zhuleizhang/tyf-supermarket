@@ -10,9 +10,11 @@ const SettingsPage: React.FC = () => {
 		autoReturnToCheckoutMinutes,
 		autoEnterCheckoutModeMinutes,
 		autoBackupDays,
+		topSellingProductsCount,
 		setAutoReturnToCheckoutMinutes,
 		setAutoEnterCheckoutModeMinutes,
 		setAutoBackupDays,
+		setTopSellingProductsCount,
 	} = useConfigStore();
 
 	// 处理自动返回收银页面时间的变化
@@ -36,6 +38,14 @@ const SettingsPage: React.FC = () => {
 		if (value >= 0) {
 			setAutoBackupDays(value);
 			message.success('自动备份间隔已更新');
+		}
+	};
+
+	// 处理销售排行商品数量的变化
+	const handleTopSellingProductsChange = (value: number) => {
+		if (value >= 1) {
+			setTopSellingProductsCount(value);
+			message.success('销售排行商品数量已更新');
 		}
 	};
 
@@ -126,13 +136,37 @@ const SettingsPage: React.FC = () => {
 								<span className="text-gray-600">天</span>
 							</div>
 							<p className="text-gray-500 text-sm">
-								设置为0表示禁用此功能，默认1天备份一次
-							</p>
-						</div>
-					</div>
+						设置为0表示禁用此功能，默认1天备份一次
+					</p>
 				</div>
 
-				{/* 批量创建商品卡片 */}
+				{/* 销售排行商品数量设置 */}
+				<div className="flex flex-col space-y-2">
+					<label
+						id="topSellingProductsCount"
+						className="text-gray-700 font-medium"
+					>
+						商品销售排行显示的商品数量
+					</label>
+					<div className="flex items-center space-x-3">
+						<InputNumber
+							id="topSellingProductsCount"
+							type="number"
+							min={1}
+							value={topSellingProductsCount}
+							onChange={handleTopSellingProductsChange}
+						/>
+						<span className="text-gray-600">个</span>
+					</div>
+					<p className="text-gray-500 text-sm">
+						设置销售排行显示的商品数量，至少为1个，默认10个
+					</p>
+				</div>
+			</div>
+			
+		</div>
+
+		{/* 批量创建商品卡片 */}
 				<div className="bg-white rounded-lg shadow-md p-6">
 					<h2 className="text-xl font-semibold text-gray-700 mb-4">
 						批量创建商品
