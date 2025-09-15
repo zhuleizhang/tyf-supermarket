@@ -286,7 +286,7 @@ const SettingsPage: React.FC = () => {
 					</h2>
 					{loading ? (
 						<div className="flex justify-center items-center py-4">
-							<Spin tip="正在获取存储空间信息..." />
+							<Spin />
 						</div>
 					) : error ? (
 						<div className="text-red-500 py-4">{error}</div>
