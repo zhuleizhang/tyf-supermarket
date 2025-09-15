@@ -300,6 +300,9 @@ const StatisticsPage: React.FC = () => {
 				const product = productList.find(
 					(p) => p.id === item.productId
 				);
+				if (!product) {
+					return;
+				}
 
 				// 获取分类名称（而不是分类ID）
 				let categoryName = '未分类';
