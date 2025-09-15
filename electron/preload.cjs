@@ -79,6 +79,16 @@ contextBridge.exposeInMainWorld('electron', {
 			throw error;
 		}
 	},
+
+	// 获取IndexedDB文件大小
+	getIndexedDBSize: async () => {
+		try {
+			return await ipcRenderer.invoke('getIndexedDBSize');
+		} catch (error) {
+			console.error('获取IndexedDB大小失败:', error);
+			throw error;
+		}
+	},
 });
 
 // 为TypeScript提供类型定义支持

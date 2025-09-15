@@ -408,3 +408,42 @@ ipcMain.handle('deleteBackupFile', async (event, filePath) => {
 		throw error;
 	}
 });
+
+// 处理获取IndexedDB大小的请求
+ipcMain.handle('getIndexedDBSize', async () => {
+	try {
+		const userDataPath = app.getPath('userData');
+
+		// IndexedDB文件通常存储在LevelDB文件夹中
+		const dbPath = path.join(userDataPath, 'IndexedDB');
+
+		// 如果目录不存在，返回0
+		if (!fs.existsSync(dbPath)) {
+			return 0;
+		}
+
+		// 计算目录大小的函数
+		const getDirectorySize = (dirPath) => {
+			let size = 0;
+			const files = fs.readdirSync(dirPath);
+
+			for (const file of files) {
+				const filePath = path.join(dirPath, file);
+				const stats = fs.statSync(filePath);
+
+				if (stats.isDirectory()) {
+					size += getDirectorySize(filePath);
+				} else {
+					size += stats.size;
+				}
+			}
+
+			return size;
+		};
+
+		return getDirectorySize(dbPath);
+	} catch (error) {
+		logToFile('计算IndexedDB大小失败:', error);
+		return 0;
+	}
+});

@@ -84,6 +84,18 @@ const SettingsPage: React.FC = () => {
 			if ('storage' in navigator && 'estimate' in navigator.storage) {
 				const estimate = await navigator.storage.estimate();
 				setStorageInfo(estimate);
+
+				// 使用Electron的IPC获取实际的IndexedDB大小
+				if (window.electron) {
+					const indexedDBSize =
+						await window.electron.getIndexedDBSize();
+
+					setStorageInfo((prev) => ({
+						...prev,
+						usage: indexedDBSize,
+						usageDetails: { indexedDB: indexedDBSize },
+					}));
+				}
 			} else {
 				setError('您的浏览器不支持查看存储空间信息');
 			}
@@ -328,7 +340,9 @@ const SettingsPage: React.FC = () => {
 								</div>
 							</div>
 
-							{storageInfo.quota && storageInfo.usage && (
+							{Boolean(
+								storageInfo.quota && storageInfo.usage
+							) && (
 								<div className="flex flex-col space-y-2">
 									<label className="text-gray-700 font-medium">
 										已使用百分比

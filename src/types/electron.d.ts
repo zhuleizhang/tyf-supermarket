@@ -36,6 +36,7 @@ declare global {
 			deleteBackupFile: (
 				filePath: string
 			) => Promise<{ success: boolean }>;
+			getIndexedDBSize: () => Promise<number>;
 		};
 		process?: {
 			type?: string;
