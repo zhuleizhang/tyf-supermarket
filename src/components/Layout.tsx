@@ -6,8 +6,8 @@ import {
 	DatabaseOutlined,
 	BarChartOutlined,
 	ShoppingOutlined,
-	TagOutlined,
 	SettingOutlined,
+	TagsOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Logo from '@/assets/website.png';
@@ -43,7 +43,7 @@ const AppLayout: React.FC<LayoutProps> = ({ children }) => {
 		},
 		{
 			key: '/categories',
-			icon: <TagOutlined />,
+			icon: <TagsOutlined />,
 			label: '分类管理',
 		},
 		{

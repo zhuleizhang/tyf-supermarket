@@ -311,7 +311,7 @@ const OrdersPage: React.FC = () => {
 					setTempOrderItems([]);
 					form.resetFields();
 				}}
-				width={800}
+				width={1000}
 			>
 				<Form form={form} layout="vertical" className="mb-4">
 					<Form.Item
@@ -342,7 +342,10 @@ const OrdersPage: React.FC = () => {
 						) : (
 							<div className="space-y-4">
 								{/* 添加标题行 */}
-								<Row className="font-bold text-gray-700 pb-2 border-b">
+								<Row
+									className="font-bold text-gray-700 pb-2 border-b"
+									gutter={16}
+								>
 									<Col span={10}>商品名称</Col>
 									<Col span={4}>数量</Col>
 									<Col span={4}>单价</Col>
@@ -354,7 +357,6 @@ const OrdersPage: React.FC = () => {
 									<Row
 										key={tempItem.id}
 										align="middle"
-										className="p-2 border-b"
 										gutter={16}
 									>
 										<Col span={10}>
@@ -428,6 +430,7 @@ const OrdersPage: React.FC = () => {
 											>
 												<Button
 													type="link"
+													className="p-0"
 													danger
 													icon={<DeleteOutlined />}
 												>
