@@ -59,6 +59,14 @@ const CheckoutPage: React.FC = () => {
 	const scanning = useCartStore((state) => state.scanning);
 	const toggleScanning = useCartStore((state) => state.toggleScanning);
 	const setScanning = useCartStore((state) => state.setScanning);
+	const refreshCartItems = useCartStore((state) => state.refreshCartItems);
+
+	// 组件加载时刷新购物车商品信息
+	useEffect(() => {
+		// 刷新购物车商品信息
+		refreshCartItems();
+		console.log('refreshCartItems');
+	}, []);
 
 	// 初始化音频
 	useEffect(() => {
@@ -144,6 +152,12 @@ const CheckoutPage: React.FC = () => {
 				addToCart(product);
 			} else {
 				message.error('未找到该商品');
+				// 全选条码输入框的内容，便于下次扫码直接覆盖
+				setTimeout(() => {
+					if (barcodeRef.current) {
+						barcodeRef.current.select();
+					}
+				}, 0);
 				playErrorSound();
 			}
 		} catch (error) {

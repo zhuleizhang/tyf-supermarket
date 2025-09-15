@@ -260,7 +260,7 @@ const ProductsPage: React.FC = () => {
 			title: '创建时间',
 			dataIndex: 'createdAt',
 			key: 'createdAt',
-			width: 100,
+			width: 150,
 			render: (createdAt: string) => {
 				const date = new Date(createdAt);
 				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
@@ -270,7 +270,7 @@ const ProductsPage: React.FC = () => {
 			title: '更新时间',
 			dataIndex: 'updatedAt',
 			key: 'updatedAt',
-			width: 100,
+			width: 150,
 			render: (updatedAt: string) => {
 				const date = new Date(updatedAt);
 				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
@@ -425,6 +425,7 @@ const ProductsPage: React.FC = () => {
 					>
 						<InputNumber
 							className="w-full"
+							addonBefore="¥"
 							placeholder="请输入商品价格"
 							precision={2}
 							min={0}

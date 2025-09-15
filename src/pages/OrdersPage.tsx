@@ -13,6 +13,8 @@ import {
 	Popconfirm,
 	message,
 	Tag,
+	Row,
+	Col,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -339,88 +341,106 @@ const OrdersPage: React.FC = () => {
 							</p>
 						) : (
 							<div className="space-y-4">
+								{/* 添加标题行 */}
+								<Row className="font-bold text-gray-700 pb-2 border-b">
+									<Col span={10}>商品名称</Col>
+									<Col span={4}>数量</Col>
+									<Col span={4}>单价</Col>
+									<Col span={4}>小计</Col>
+									<Col span={2}>操作</Col>
+								</Row>
+
 								{tempOrderItems.map((tempItem, index) => (
-									<div
+									<Row
 										key={tempItem.id}
-										className="flex items-center space-x-4 p-2 border-b"
+										align="middle"
+										className="p-2 border-b"
+										gutter={16}
 									>
-										<Select
-											style={{ minWidth: 200, flex: 1 }}
-											placeholder="选择商品"
-											value={tempItem.productId}
-											showSearch
-											optionFilterProp="label"
-											onChange={(value) =>
-												updateOrderItem(
-													index,
-													'productId',
-													value
-												)
-											}
-											options={selectedProducts.map(
-												(product) => ({
-													label: `${product.name} (${product.barcode})`,
-													value: product.id,
-												})
-											)}
-										/>
-
-										<InputNumber
-											style={{ width: 100 }}
-											placeholder="数量"
-											value={tempItem.quantity}
-											min={1}
-											onChange={(value) =>
-												updateOrderItem(
-													index,
-													'quantity',
-													value
-												)
-											}
-										/>
-
-										<InputNumber
-											style={{ width: 100 }}
-											placeholder="单价"
-											value={tempItem.unitPrice}
-											min={0}
-											onChange={(value) =>
-												updateOrderItem(
-													index,
-													'unitPrice',
-													value
-												)
-											}
-										/>
-
-										<span className="text-gray-500">
-											小计:{' '}
-											{(tempItem.subtotal || 0).toFixed(
-												2
-											)}
-										</span>
-										<Popconfirm
-											title="确定要删除这个商品吗？"
-											onConfirm={() =>
-												removeOrderItem(index)
-											}
-											okText="确定"
-											cancelText="取消"
-										>
-											<Button
-												type="link"
-												danger
-												icon={<DeleteOutlined />}
+										<Col span={10}>
+											<Select
+												style={{ width: '100%' }}
+												placeholder="选择商品"
+												value={tempItem.productId}
+												showSearch
+												optionFilterProp="label"
+												onChange={(value) =>
+													updateOrderItem(
+														index,
+														'productId',
+														value
+													)
+												}
+												options={selectedProducts.map(
+													(product) => ({
+														label: `${product.name} (${product.barcode})`,
+														value: product.id,
+													})
+												)}
+											/>
+										</Col>
+										<Col span={4}>
+											<InputNumber
+												style={{ width: '100%' }}
+												placeholder="数量"
+												value={tempItem.quantity}
+												min={1}
+												onChange={(value) =>
+													updateOrderItem(
+														index,
+														'quantity',
+														value
+													)
+												}
+											/>
+										</Col>
+										<Col span={4}>
+											<InputNumber
+												style={{ width: '100%' }}
+												placeholder="单价"
+												value={tempItem.unitPrice}
+												min={0}
+												onChange={(value) =>
+													updateOrderItem(
+														index,
+														'unitPrice',
+														value
+													)
+												}
+											/>
+										</Col>
+										<Col span={4}>
+											<span className="text-gray-500">
+												¥
+												{(
+													tempItem.subtotal || 0
+												).toFixed(2)}
+											</span>
+										</Col>
+										<Col span={2}>
+											<Popconfirm
+												title="确定要删除这个商品吗？"
+												onConfirm={() =>
+													removeOrderItem(index)
+												}
+												okText="确定"
+												cancelText="取消"
 											>
-												删除
-											</Button>
-										</Popconfirm>
-									</div>
+												<Button
+													type="link"
+													danger
+													icon={<DeleteOutlined />}
+												>
+													删除
+												</Button>
+											</Popconfirm>
+										</Col>
+									</Row>
 								))}
 
 								<div className="flex justify-end mt-4">
 									<span className="text-lg font-bold">
-										订单总价:{' '}
+										订单总价: ¥
 										{calculateOrderTotal(
 											tempOrderItems
 										).toFixed(2)}

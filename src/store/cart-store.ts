@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Product } from '../db';
+import { productService, type Product } from '../db';
 import { persist } from 'zustand/middleware';
 
 // 结算商品项类型
@@ -23,6 +23,8 @@ export interface CartState {
 	removeFromCart: (productId: string) => void;
 	updateCartItemQuantity: (productId: string, quantity: number) => void;
 	clearCart: () => void;
+	// 刷新购物车商品信息
+	refreshCartItems: () => Promise<void>;
 
 	// 搜索操作
 	setSearchKeyword: (keyword: string) => void;
@@ -80,7 +82,6 @@ export const useCartStore = create(
 							return {
 								cartItems: updatedItems,
 								totalAmount: newTotalAmount,
-								currentBarcode: '', // 清空当前条码
 							};
 						} else {
 							// 添加新商品
@@ -97,7 +98,6 @@ export const useCartStore = create(
 							return {
 								cartItems: [...state.cartItems, newItem],
 								totalAmount: newTotalAmount,
-								currentBarcode: '', // 清空当前条码
 							};
 						}
 					});
@@ -186,6 +186,45 @@ export const useCartStore = create(
 						(total, item) => total + item.quantity,
 						0
 					);
+				},
+
+				// 刷新购物车商品信息
+				refreshCartItems: async () => {
+					const { cartItems } = get();
+					if (cartItems.length === 0) return;
+
+					const updatedItems: CartItem[] = [];
+
+					// 获取每个商品的最新信息
+					for (const item of cartItems) {
+						try {
+							const latestProduct = await productService.getById(
+								item.product.id
+							);
+							if (latestProduct) {
+								// 更新商品信息和小计
+								updatedItems.push({
+									...item,
+									product: latestProduct,
+									subtotal:
+										latestProduct.price * item.quantity,
+								});
+							}
+						} catch (error) {
+							console.log(error, '查询商品信息失败');
+						}
+					}
+					// 重新计算总价
+					const newTotalAmount = updatedItems.reduce(
+						(total, item) => total + item.subtotal,
+						0
+					);
+
+					// 更新状态
+					set({
+						cartItems: updatedItems,
+						totalAmount: newTotalAmount,
+					});
 				},
 			};
 		},

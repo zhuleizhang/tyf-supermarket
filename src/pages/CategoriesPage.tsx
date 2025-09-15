@@ -1,6 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Input, Modal, Form, message, Tag } from 'antd';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+	Table,
+	Button,
+	Input,
+	Modal,
+	Form,
+	message,
+	Tag,
+	InputRef,
+} from 'antd';
 import {
 	PlusOutlined,
 	EditOutlined,
@@ -10,6 +19,7 @@ import {
 import type { Category } from '../db';
 import { categoryService } from '../db';
 import Page from '@/components/Page';
+import { useDebounceFn } from 'ahooks';
 
 const { Search } = Input;
 
@@ -24,6 +34,8 @@ const CategoriesPage: React.FC = () => {
 	const [form] = Form.useForm();
 	const [searchKeyword, setSearchKeyword] = useState<string>('');
 
+	const categoryNameInputForAddition = useRef<InputRef>(null);
+
 	// 加载分类列表 - 使用 useCallback 避免每次渲染重新创建
 	const loadCategories = useCallback(async () => {
 		setLoading(true);
@@ -32,10 +44,12 @@ const CategoriesPage: React.FC = () => {
 
 			// 应用搜索过滤
 			if (searchKeyword) {
-				const filtered = allCategories.filter((category) =>
-					category.name
-						.toLowerCase()
-						.includes(searchKeyword.toLowerCase())
+				const filtered = allCategories.filter(
+					(category) =>
+						category.name
+							.toLowerCase()
+							.includes(searchKeyword.toLowerCase()) ||
+						category.id.includes(searchKeyword)
 				);
 				setCategories(filtered);
 			} else {
@@ -59,6 +73,10 @@ const CategoriesPage: React.FC = () => {
 	const handleSearch = (value: string) => {
 		setSearchKeyword(value);
 	};
+
+	const { run: handleSearchDebounced } = useDebounceFn(handleSearch, {
+		wait: 300,
+	});
 
 	// 打开添加分类模态框
 	const showAddModal = () => {
@@ -197,12 +215,13 @@ const CategoriesPage: React.FC = () => {
 				</h1>
 				<div className="flex gap-2">
 					<Search
-						placeholder="搜索分类名称"
+						placeholder="搜索分类名称或ID"
 						allowClear
 						enterButton={<SearchOutlined />}
 						size="middle"
 						style={{ width: 250 }}
 						onSearch={handleSearch}
+						onChange={(v) => handleSearchDebounced(v.target.value)}
 					/>
 					<Button
 						type="primary"
@@ -235,6 +254,11 @@ const CategoriesPage: React.FC = () => {
 				cancelText="取消"
 				onCancel={() => setIsModalVisible(false)}
 				onOk={handleSubmit}
+				afterOpenChange={(visible) => {
+					if (visible) {
+						categoryNameInputForAddition.current.focus();
+					}
+				}}
 			>
 				<Form
 					form={form}
@@ -246,12 +270,12 @@ const CategoriesPage: React.FC = () => {
 					<Form.Item
 						name="name"
 						label="分类名称"
-						rules={[
-							{ required: true, message: '请输入分类名称' },
-							{ max: 50, message: '分类名称不能超过50个字符' },
-						]}
+						rules={[{ required: true, message: '请输入分类名称' }]}
 					>
-						<Input placeholder="请输入分类名称" />
+						<Input
+							placeholder="请输入分类名称"
+							ref={categoryNameInputForAddition}
+						/>
 					</Form.Item>
 				</Form>
 			</Modal>
