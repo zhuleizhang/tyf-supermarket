@@ -210,8 +210,11 @@ const SettingsPage: React.FC = () => {
 				if (backupFilePath) {
 					localStorage.setItem('pendingRestore', backupFilePath);
 				}
-
-				window.electron.reload();
+				const timeout = 3;
+				message.info(`${timeout}秒后自动重启应用`);
+				setTimeout(() => {
+					window.electron.reload();
+				}, timeout * 1000);
 
 				// 询问用户是否立即重启应用
 				// Modal.confirm({
