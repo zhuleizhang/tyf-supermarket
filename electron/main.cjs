@@ -133,7 +133,9 @@ function createWindow() {
 					</html>
 				`;
 				await mainWindow.loadURL(
-					`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`
+					`data:text/html;charset=utf-8,${encodeURIComponent(
+						errorHtml
+					)}`
 				);
 			} else {
 				await dialog.showMessageBox(mainWindow, {
@@ -449,6 +451,7 @@ ipcMain.handle('getIndexedDBSize', async () => {
 });
 
 // 添加在现有IPC处理函数后面
+// 修改compactIndexedDB处理函数，使用系统命令强制删除
 ipcMain.handle('compactIndexedDB', async () => {
 	try {
 		const userDataPath = app.getPath('userData');
@@ -465,31 +468,50 @@ ipcMain.handle('compactIndexedDB', async () => {
 			return { success: false, message: '无法获取主窗口' };
 		}
 
-		// 删除原数据库目录中的所有文件（但保留目录结构）
-		const removeFiles = (dir) => {
-			const entries = fs.readdirSync(dir, { withFileTypes: true });
+		// 使用系统命令强制删除（最暴力的方式）
+		const forceDelete = (pathToDelete) => {
+			return new Promise((resolve, reject) => {
+				const { exec } = require('child_process');
+				let command = '';
 
-			for (const entry of entries) {
-				const fullPath = path.join(dir, entry.name);
-				if (entry.isDirectory()) {
-					removeFiles(fullPath);
-					// 保留空目录
+				if (process.platform === 'win32') {
+					// Windows系统：使用rmdir /s /q强制删除目录及其内容
+					// 先尝试常规删除文件
+					command = `cmd /c "if exist \"${pathToDelete}\" (rmdir /s /q \"${pathToDelete}\" && mkdir \"${pathToDelete}\")"`;
 				} else {
-					fs.unlinkSync(fullPath);
+					// macOS/Linux系统：使用rm -rf强制删除
+					command = `rm -rf "${pathToDelete}"/* && rm -rf "${pathToDelete}/.*" 2>/dev/null || true`;
 				}
-			}
+
+				logToFile(`执行强制删除命令: ${command}`);
+				exec(command, (error, stdout, stderr) => {
+					if (error) {
+						logToFile(`强制删除命令执行失败: ${error.message}`);
+						if (stderr) {
+							logToFile(`命令错误输出: ${stderr}`);
+						}
+						reject(error);
+					} else {
+						logToFile(`强制删除成功`);
+						if (stdout) {
+							logToFile(`命令输出: ${stdout}`);
+						}
+						resolve();
+					}
+				});
+			});
 		};
 
-		logToFile('开始删除旧的IndexedDB文件...');
-		removeFiles(dbPath);
-		logToFile('旧的IndexedDB文件已删除');
+		logToFile('开始强制删除旧的IndexedDB文件...');
+		await forceDelete(dbPath);
+		logToFile('旧的IndexedDB文件已强制删除');
 
-		return { success: true, message: '数据库文件删除成功' };
+		return { success: true, message: '数据库文件已强制删除成功' };
 	} catch (error) {
-		logToFile('数据库压缩处理失败:', error);
+		logToFile('数据库强制删除处理失败:', error);
 		return {
 			success: false,
-			message: '数据库压缩失败: ' + (error.message || String(error)),
+			message: '数据库强制删除失败: ' + (error.message || String(error)),
 		};
 	}
 });
