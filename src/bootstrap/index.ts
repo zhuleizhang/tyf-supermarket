@@ -20,9 +20,12 @@ export const bootstrap = async () => {
 						message.loading('正在恢复数据...', 0);
 						importDataFromFilePath(pendingRestorePath);
 						message.destroy();
-						message.success('数据恢复成功');
+						message.success('数据恢复成功，即将自动刷新页面');
 						// 清除标记，防止重复恢复
 						localStorage.removeItem('pendingRestore');
+						setTimeout(() => {
+							window.location.reload();
+						}, 1000);
 					} catch (error) {
 						console.error('恢复数据失败:', error);
 						message.destroy();

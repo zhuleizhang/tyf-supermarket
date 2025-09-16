@@ -1,5 +1,6 @@
 import localforage from 'localforage';
 import { isProduction } from '../config';
+import { UNCATEGORIZED_OPTION } from '@/constants';
 
 // 数据模型类型定义
 export interface Product {
@@ -405,9 +406,15 @@ export const productService = {
 
 			// 分类筛选
 			if (category_id) {
-				allProducts = allProducts.filter(
-					(product) => product.category_id === category_id
-				);
+				if (category_id === UNCATEGORIZED_OPTION.id) {
+					allProducts = allProducts.filter(
+						(product) => !product.category_id
+					);
+				} else {
+					allProducts = allProducts.filter(
+						(product) => product.category_id === category_id
+					);
+				}
 			}
 
 			// 按创建时间排序（降序）

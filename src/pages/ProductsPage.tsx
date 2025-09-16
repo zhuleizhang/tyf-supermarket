@@ -27,6 +27,7 @@ import {
 } from '../db';
 import { useDebounceFn } from 'ahooks';
 import Page from '@/components/Page';
+import { UNCATEGORIZED_OPTION } from '@/constants';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -329,6 +330,12 @@ const ProductsPage: React.FC = () => {
 								{category.name}
 							</Option>
 						))}
+						<Option
+							key={UNCATEGORIZED_OPTION.id}
+							value={UNCATEGORIZED_OPTION.id}
+						>
+							{UNCATEGORIZED_OPTION.name}
+						</Option>
 					</Select>
 					<Button
 						type="primary"
