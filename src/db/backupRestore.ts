@@ -95,7 +95,7 @@ export const exportData = async (): Promise<void> => {
 };
 
 // 从JSON文件导入数据
-export const importData = async (file: File): Promise<void> => {
+export const importDataFromFile = async (file: File): Promise<void> => {
 	try {
 		// let fileContent: string;
 
@@ -132,6 +132,39 @@ export const importData = async (file: File): Promise<void> => {
 			reader.onerror = () => reject(new Error('文件读取错误'));
 			reader.readAsText(file);
 		});
+
+		// 解析JSON数据
+		const backupData: BackupData = JSON.parse(fileContent as string);
+
+		// 验证数据格式
+		if (!validateBackupData(backupData)) {
+			throw new Error('无效的备份文件格式');
+		}
+
+		// 清空现有数据
+		await clearAllData();
+
+		// 按顺序导入数据（分类->商品->订单->订单项）
+		await importCategories(backupData.categories);
+		await importProducts(backupData.products);
+		await importOrders(backupData.orders);
+		await importOrderItems(backupData.orderItems);
+	} catch (error) {
+		console.error('导入数据失败:', error);
+		throw new Error(
+			`导入数据失败: ${error instanceof Error ? error.message : '未知错误'}
+		`
+		);
+	}
+};
+
+// 从JSON文件路径导入数据
+export const importDataFromFilePath = async (
+	filePath: string
+): Promise<void> => {
+	try {
+		// 读取文件
+		const fileContent = await window.electron.readBackupFile(filePath);
 
 		// 解析JSON数据
 		const backupData: BackupData = JSON.parse(fileContent as string);

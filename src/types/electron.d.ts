@@ -37,6 +37,13 @@ declare global {
 				filePath: string
 			) => Promise<{ success: boolean }>;
 			getIndexedDBSize: () => Promise<number>;
+			// 在现有的ElectronAPI接口中添加
+			compactIndexedDB: () => Promise<{
+				success: boolean;
+				message: string;
+			}>;
+			// 添加重启应用方法
+			reload: () => Promise<void>;
 		};
 		process?: {
 			type?: string;

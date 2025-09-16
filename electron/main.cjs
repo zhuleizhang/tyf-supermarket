@@ -447,3 +447,68 @@ ipcMain.handle('getIndexedDBSize', async () => {
 		return 0;
 	}
 });
+
+// 添加在现有IPC处理函数后面
+ipcMain.handle('compactIndexedDB', async () => {
+	try {
+		const userDataPath = app.getPath('userData');
+		const dbPath = path.join(userDataPath, 'IndexedDB');
+
+		// 如果目录不存在，直接返回
+		if (!fs.existsSync(dbPath)) {
+			return { success: false, message: 'IndexedDB目录不存在' };
+		}
+
+		// 获取主窗口
+		const mainWindow = BrowserWindow.getAllWindows()[0];
+		if (!mainWindow) {
+			return { success: false, message: '无法获取主窗口' };
+		}
+
+		// 删除原数据库目录中的所有文件（但保留目录结构）
+		const removeFiles = (dir) => {
+			const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+			for (const entry of entries) {
+				const fullPath = path.join(dir, entry.name);
+				if (entry.isDirectory()) {
+					removeFiles(fullPath);
+					// 保留空目录
+				} else {
+					fs.unlinkSync(fullPath);
+				}
+			}
+		};
+
+		logToFile('开始删除旧的IndexedDB文件...');
+		removeFiles(dbPath);
+		logToFile('旧的IndexedDB文件已删除');
+
+		return { success: true, message: '数据库文件删除成功' };
+	} catch (error) {
+		logToFile('数据库压缩处理失败:', error);
+		return {
+			success: false,
+			message: '数据库压缩失败: ' + (error.message || String(error)),
+		};
+	}
+});
+
+// 在文件末尾添加重启应用的IPC处理函数
+ipcMain.handle('reload', async () => {
+	try {
+		// 获取当前应用路径和参数
+		const appPath = app.getPath('exe');
+		const args = process.argv.slice(1);
+
+		// 记录重启操作到日志
+		logToFile('应用正在重启...');
+
+		// 退出当前实例并重启应用
+		app.relaunch({ args });
+		app.exit(0);
+	} catch (error) {
+		logToFile('重启应用失败:', error);
+		throw error;
+	}
+});

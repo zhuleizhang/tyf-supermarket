@@ -16,7 +16,7 @@ import {
 	DeleteOutlined,
 	ClearOutlined,
 } from '@ant-design/icons';
-import { autoExportData, exportData, importData } from '../db';
+import { autoExportData, exportData, importDataFromFile } from '../db';
 
 const { confirm } = Modal;
 const { Text } = Typography;
@@ -158,7 +158,7 @@ const DataBackupRestore: React.FC = () => {
 		try {
 			setUploading(true);
 			message.loading('正在导入数据...');
-			await importData(file);
+			await importDataFromFile(file);
 			message.destroy();
 			message.success('数据导入成功');
 		} catch (error) {

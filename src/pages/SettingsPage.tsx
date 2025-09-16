@@ -4,8 +4,9 @@ import BulkProductCreate from '../components/BulkProductCreate';
 import { useConfigStore } from '../store/config-store';
 import { InputNumber, message, Spin, Progress, Modal, Button } from 'antd';
 import Page from '@/components/Page';
-import { orderService } from '../db';
+import { orderService, dbUtils, autoExportData } from '../db';
 import { DeleteOutlined } from '@ant-design/icons';
+import { useCartStore } from '@/store';
 
 const SettingsPage: React.FC = () => {
 	const {
@@ -18,6 +19,8 @@ const SettingsPage: React.FC = () => {
 		setAutoBackupDays,
 		setTopSellingProductsCount,
 	} = useConfigStore();
+
+	const clearCart = useCartStore((s) => s.clearCart);
 
 	// 存储空间信息状态
 	const [storageInfo, setStorageInfo] = useState<{
@@ -161,6 +164,96 @@ const SettingsPage: React.FC = () => {
 					message.error('删除订单数据时发生错误');
 				}
 			},
+		});
+	};
+
+	const compactDatabaseConfirm = async () => {
+		try {
+			// 先自动导出备份文件作为安全措施
+			const backupResult = await autoExportData();
+			if (!backupResult || !backupResult.success) {
+				// 如果备份失败，询问用户是否继续
+				Modal.confirm({
+					title: '备份失败',
+					content:
+						'数据备份创建失败，继续压缩可能导致数据丢失。是否仍要继续？',
+					okText: '继续',
+					cancelText: '取消',
+					onOk: () => executeCompactDatabase(),
+				});
+				return;
+			}
+
+			// 备份成功，继续执行压缩
+			await executeCompactDatabase(backupResult.filePath);
+		} catch (error) {
+			console.error('压缩数据库时出错:', error);
+			message.error('压缩数据库时发生错误');
+		}
+	};
+
+	// 执行数据库压缩的核心逻辑
+	const executeCompactDatabase = async (backupFilePath?: string) => {
+		try {
+			// 显示加载中
+			message.loading('正在压缩数据库...', 0);
+
+			clearCart();
+			// 执行压缩操作
+			const success = await dbUtils.compactIndexedDB();
+
+			// 关闭加载提示
+			message.destroy();
+
+			if (success) {
+				// 将备份路径保存到localStorage，用于应用重启后恢复
+				if (backupFilePath) {
+					localStorage.setItem('pendingRestore', backupFilePath);
+				}
+
+				window.electron.reload();
+
+				// 询问用户是否立即重启应用
+				// Modal.confirm({
+				// 	title: '数据库压缩成功',
+				// 	content: '压缩已完成，建议重启应用以恢复数据。现在重启吗？',
+				// 	okText: '立即重启',
+				// 	cancelText: '稍后重启',
+				// 	onOk: () => {
+				// 		// 如果在Electron环境中，可以调用重启方法
+				// 		if (window.electron) {
+				// 			// 通知主进程重启应用
+				// 			// 注意：需要在electron中实现这个方法
+				// 			window.electron.reload();
+				// 		} else {
+				// 			// 浏览器环境直接刷新页面
+				// 			window.location.reload();
+				// 		}
+				// 	},
+				// 	onCancel: () => {
+				// 		message.info('请在方便时手动重启应用');
+				// 		// 刷新存储空间信息
+				// 		getStorageInfo();
+				// 	},
+				// });
+			} else {
+				message.error('数据库压缩失败');
+			}
+		} catch (error) {
+			console.error('压缩数据库时出错:', error);
+			message.error('压缩数据库时发生错误');
+		}
+	};
+
+	// 处理数据库压缩
+	const handleCompactDatabase = () => {
+		Modal.confirm({
+			title: '数据库压缩确认',
+			content:
+				'此操作将压缩数据库以释放未使用空间，操作成功后会自动重启，操作过程中请勿关闭应用。确定要继续吗？',
+			okText: '确定压缩',
+			cancelText: '取消',
+			onOk: compactDatabaseConfirm,
 		});
 	};
 
@@ -376,16 +469,28 @@ const SettingsPage: React.FC = () => {
 							)}
 							{/* 添加删除一年前订单数据的按钮 */}
 							<div className="mt-4 pt-4 border-t border-gray-200">
-								<Button
-									type="primary"
-									danger
-									icon={<DeleteOutlined />}
-									onClick={handleDeleteOldOrders}
-								>
-									删除一年前的订单数据
-								</Button>
+								<div className="flex flex-wrap gap-2">
+									<Button
+										type="primary"
+										danger
+										icon={<DeleteOutlined />}
+										onClick={handleDeleteOldOrders}
+									>
+										删除一年前的订单数据
+									</Button>
+
+									<Button
+										type="primary"
+										onClick={handleCompactDatabase}
+									>
+										压缩数据库文件体积
+									</Button>
+								</div>
 								<p className="text-gray-500 text-sm mt-2">
 									删除一年前的订单数据可以释放存储空间，但删除后数据将无法恢复
+								</p>
+								<p className="text-gray-500 text-sm mt-2">
+									压缩数据库可以释放已删除数据占用的空间
 								</p>
 							</div>
 						</div>

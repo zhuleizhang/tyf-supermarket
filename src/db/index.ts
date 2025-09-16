@@ -59,33 +59,99 @@ export interface TopProduct {
 	amount: number;
 }
 
-// 配置localforage
-localforage.config({
-	name: isProduction ? 'SupermarketPriceSystem' : 'SupermarketPriceSystemDev',
-	storeName: 'supermarket_data', // 数据库默认表名
-	description: '小型超市商品价格管理系统数据存储',
-});
+// 导出实例以便在应用中使用
+export let productsStore: LocalForage;
+export let ordersStore: LocalForage;
+export let orderItemsStore: LocalForage;
+export let categoriesStore: LocalForage;
 
-// 为不同的数据类型创建单独的存储实例
-export const productsStore = localforage.createInstance({
-	name: 'SupermarketPriceSystem',
-	storeName: 'products',
-});
+// 初始化 localforage 及其存储实例
+export const initLocalForageStores = () => {
+	// 配置localforage
+	localforage.config({
+		name: isProduction
+			? 'SupermarketPriceSystem'
+			: 'SupermarketPriceSystemDev',
+		storeName: 'supermarket_data', // 数据库默认表名
+		description: '小型超市商品价格管理系统数据存储',
+	});
 
-export const ordersStore = localforage.createInstance({
-	name: 'SupermarketPriceSystem',
-	storeName: 'orders',
-});
+	// 为不同的数据类型创建单独的存储实例
+	const productsStoreTemp = localforage.createInstance({
+		name: 'SupermarketPriceSystem',
+		storeName: 'products',
+	});
 
-export const orderItemsStore = localforage.createInstance({
-	name: 'SupermarketPriceSystem',
-	storeName: 'order_items',
-});
+	const ordersStoreTemp = localforage.createInstance({
+		name: 'SupermarketPriceSystem',
+		storeName: 'orders',
+	});
 
-export const categoriesStore = localforage.createInstance({
-	name: 'SupermarketPriceSystem',
-	storeName: 'categories',
-});
+	const orderItemsStoreTemp = localforage.createInstance({
+		name: 'SupermarketPriceSystem',
+		storeName: 'order_items',
+	});
+
+	const categoriesStoreTemp = localforage.createInstance({
+		name: 'SupermarketPriceSystem',
+		storeName: 'categories',
+	});
+
+	productsStore = productsStoreTemp;
+	ordersStore = ordersStoreTemp;
+	orderItemsStore = orderItemsStoreTemp;
+	categoriesStore = categoriesStoreTemp;
+
+	// 返回创建的实例，方便访问
+	return {
+		productsStore: productsStore,
+		ordersStore: ordersStore,
+		orderItemsStore: orderItemsStore,
+		categoriesStore: categoriesStore,
+	};
+};
+
+export const disconnectDB = async () => {
+	try {
+		// 使用dropInstance替代close
+		// 注意：这会删除实例而不是仅关闭连接，后续需要重新初始化
+		// const stores = [
+		// 	{
+		// 		name: categoriesStore.config().name,
+		// 		storeName: categoriesStore.config().storeName,
+		// 	},
+		// 	{
+		// 		name: productsStore.config().name,
+		// 		storeName: productsStore.config().storeName,
+		// 	},
+		// 	{
+		// 		name: ordersStore.config().name,
+		// 		storeName: ordersStore.config().storeName,
+		// 	},
+		// 	{
+		// 		name: orderItemsStore.config().name,
+		// 		storeName: orderItemsStore.config().storeName,
+		// 	},
+		// ];
+
+		// 依次删除每个实例
+		// for (const store of stores) {
+		// 	await localforage.dropInstance(store);
+		// }
+
+		// await localforage.dropInstance();
+
+		console.log('所有数据库连接已关闭，准备进行压缩');
+	} catch (error) {
+		console.error('关闭数据库连接失败:', error);
+	}
+};
+
+// 初始化数据库
+export const initDB = () => {
+	// 重新初始化 localforage 和存储实例
+	initLocalForageStores();
+};
 
 // 分类数据缓存
 let categoryCache: { data: Category[]; lastUpdated: number } | null = null;
@@ -885,22 +951,24 @@ export const orderService = {
 		}
 	},
 
-	// 删除超过一年的订单数据
-	deleteOldOrders: async (): Promise<{ count: number; success: boolean }> => {
+	// 删除旧订单数据
+	deleteOldOrders: async (
+		days: number = 365
+	): Promise<{ count: number; success: boolean }> => {
 		try {
-			// 计算一年前的日期
-			const oneYearAgo = new Date();
-			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
 			// 获取所有订单
 			const orders: Order[] = [];
 			await ordersStore.iterate((value) => {
 				orders.push(value as Order);
 			});
 
-			// 筛选出一年前的订单
+			// 计算指定天数前的日期
+			const cutoffDate = new Date();
+			cutoffDate.setDate(cutoffDate.getDate() - days);
+
+			// 筛选出指定日期前的订单
 			const oldOrders = orders.filter(
-				(order) => new Date(order.createdAt) < oneYearAgo
+				(order) => new Date(order.createdAt) < cutoffDate
 			);
 
 			if (oldOrders.length === 0) {
@@ -935,6 +1003,34 @@ export const orderService = {
 		} catch (error) {
 			console.error('删除旧订单数据失败:', error);
 			return { count: 0, success: false };
+		}
+	},
+};
+
+// 导出数据库工具函数
+export const dbUtils = {
+	// 压缩数据库，释放未使用空间
+	compactIndexedDB: async (): Promise<boolean> => {
+		try {
+			// 清除所有存储
+			clearCategoryCache();
+			await productsStore.clear();
+			await ordersStore.clear();
+			await orderItemsStore.clear();
+			await categoriesStore.clear();
+
+			// 如果是Electron环境，尝试使用系统级压缩
+			if (window.electron?.compactIndexedDB) {
+				const result = await window.electron.compactIndexedDB();
+				if (result.success) {
+					return true;
+				}
+			}
+
+			return true;
+		} catch (error) {
+			console.error('压缩数据库失败:', error);
+			return false;
 		}
 	},
 };

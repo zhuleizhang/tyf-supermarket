@@ -89,6 +89,26 @@ contextBridge.exposeInMainWorld('electron', {
 			throw error;
 		}
 	},
+
+	// 在现有的contextBridge.exposeInMainWorld方法中添加
+	compactIndexedDB: async () => {
+		try {
+			return await ipcRenderer.invoke('compactIndexedDB');
+		} catch (error) {
+			console.error('压缩IndexedDB失败:', error);
+			throw error;
+		}
+	},
+
+	// 添加重启应用方法
+	reload: async () => {
+		try {
+			return await ipcRenderer.invoke('reload');
+		} catch (error) {
+			console.error('重启应用失败:', error);
+			throw error;
+		}
+	},
 });
 
 // 为TypeScript提供类型定义支持
