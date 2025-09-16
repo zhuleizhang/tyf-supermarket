@@ -451,7 +451,7 @@ ipcMain.handle('getIndexedDBSize', async () => {
 });
 
 // 添加在现有IPC处理函数后面
-// 修改compactIndexedDB处理函数，使用系统命令强制删除
+// 修改compactIndexedDB处理函数，使用Windows专用的强力删除方案
 ipcMain.handle('compactIndexedDB', async () => {
 	try {
 		const userDataPath = app.getPath('userData');
@@ -462,56 +462,77 @@ ipcMain.handle('compactIndexedDB', async () => {
 			return { success: false, message: 'IndexedDB目录不存在' };
 		}
 
-		// 获取主窗口
-		const mainWindow = BrowserWindow.getAllWindows()[0];
-		if (!mainWindow) {
-			return { success: false, message: '无法获取主窗口' };
-		}
-
-		// 使用系统命令强制删除（最暴力的方式）
-		const forceDelete = (pathToDelete) => {
+		// Windows系统专用的终极强制删除函数
+		const windowsUltimateDelete = (dirPath) => {
 			return new Promise((resolve, reject) => {
 				const { exec } = require('child_process');
 				let command = '';
 
 				if (process.platform === 'win32') {
-					// Windows系统：使用rmdir /s /q强制删除目录及其内容
-					// 先尝试常规删除文件
-					command = `cmd /c "if exist \"${pathToDelete}\" (rmdir /s /q \"${pathToDelete}\" && mkdir \"${pathToDelete}\")"`;
+					// 方案1: 使用Windows的DEL命令配合/F参数强制删除只读文件
+					const deleteCommand1 = `cmd /c "cd /d \"${dirPath}\" && DEL /F /S /Q /A *.* 2>nul"`;
+
+					// 方案2: 使用takeown获取所有权，icacls授予权限
+					const deleteCommand2 = `cmd /c "takeown /f \"${dirPath}\" /r /d y && icacls \"${dirPath}\" /grant administrators:F /t /c /q"`;
+
+					// 方案3: 使用PowerShell的Remove-Item命令，带有-Force和-Recurse参数
+					const deleteCommand3 = `powershell -Command "Remove-Item -Path '${dirPath}' -Force -Recurse -ErrorAction SilentlyContinue"`;
+
+					// 方案4: 最后再尝试重新创建目录
+					const recreateCommand = `cmd /c "if not exist \"${dirPath}\" mkdir \"${dirPath}\""`;
+
+					// 组合所有命令，用&&连接，一个失败就尝试下一个
+					command = `${deleteCommand1} && ${deleteCommand3} || ${deleteCommand2} && ${deleteCommand3} && ${recreateCommand}`;
 				} else {
 					// macOS/Linux系统：使用rm -rf强制删除
-					command = `rm -rf "${pathToDelete}"/* && rm -rf "${pathToDelete}/.*" 2>/dev/null || true`;
+					command = `rm -rf "${dirPath}"/* && rm -rf "${dirPath}/.*" 2>/dev/null || true`;
 				}
 
-				logToFile(`执行强制删除命令: ${command}`);
-				exec(command, (error, stdout, stderr) => {
-					if (error) {
-						logToFile(`强制删除命令执行失败: ${error.message}`);
-						if (stderr) {
-							logToFile(`命令错误输出: ${stderr}`);
+				logToFile(`执行Windows终极删除命令: ${command}`);
+				exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
+					// 即使命令返回错误，我们也检查目录是否实际上被清空了
+					try {
+						const files = fs.readdirSync(dirPath);
+						const isEmpty =
+							files.length === 0 ||
+							(files.length === 1 && files[0] === '.DS_Store'); // macOS特殊情况
+
+						if (isEmpty) {
+							logToFile('目录已成功清空，忽略命令错误');
+							resolve();
+						} else {
+							logToFile(
+								`目录未清空，剩余文件: ${files.join(', ')}`
+							);
+							if (error) {
+								reject(error);
+							} else {
+								reject(new Error('命令执行成功但目录未清空'));
+							}
 						}
-						reject(error);
-					} else {
-						logToFile(`强制删除成功`);
-						if (stdout) {
-							logToFile(`命令输出: ${stdout}`);
+					} catch (checkError) {
+						logToFile('检查目录状态失败:', checkError.message);
+						if (error) {
+							reject(error);
+						} else {
+							resolve();
 						}
-						resolve();
 					}
 				});
 			});
 		};
 
-		logToFile('开始强制删除旧的IndexedDB文件...');
-		await forceDelete(dbPath);
-		logToFile('旧的IndexedDB文件已强制删除');
+		logToFile('开始终极强制删除旧的IndexedDB文件...');
+		await windowsUltimateDelete(dbPath);
+		logToFile('旧的IndexedDB文件已终极强制删除');
 
-		return { success: true, message: '数据库文件已强制删除成功' };
+		return { success: true, message: '数据库文件已终极强制删除成功' };
 	} catch (error) {
-		logToFile('数据库强制删除处理失败:', error);
+		logToFile('数据库终极强制删除处理失败:', error);
 		return {
 			success: false,
-			message: '数据库强制删除失败: ' + (error.message || String(error)),
+			message:
+				'数据库终极强制删除失败: ' + (error.message || String(error)),
 		};
 	}
 });
