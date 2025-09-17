@@ -569,70 +569,76 @@ const checkAndDeleteIndexedDB = () => {
 			if (fs.existsSync(dbPath)) {
 				logToFile('开始删除IndexedDB文件...');
 
-				// Windows系统下的删除操作
-				if (process.platform === 'win32') {
-					// 使用多种方法尝试删除文件
-					const { execSync } = require('child_process');
-
-					try {
-						// 1. 关闭可能持有文件锁的进程
-						execSync(
-							`taskkill /F /IM leveldb.exe 2>nul || taskkill /F /IM *leveldb* 2>nul || echo No leveldb process found`,
-							{ stdio: 'ignore' }
-						);
-
-						// 2. 使用DEL命令强制删除
-						execSync(
-							`cmd /c "DEL /F /S /Q /A \"${dbPath}\\*.*\" >nul 2>&1"`,
-							{ stdio: 'ignore' }
-						);
-
-						// 3. 使用takeown和icacls获取权限
-						execSync(
-							`cmd /c "takeown /f \"${dbPath}\" /r /d y >nul 2>&1 && icacls \"${dbPath}\" /grant administrators:F /t /c /q >nul 2>&1"`,
-							{ stdio: 'ignore' }
-						);
-
-						// 4. 使用PowerShell强制删除
-						execSync(
-							`powershell -Command "Remove-Item -Path '${dbPath}/*' -Force -Recurse -ErrorAction SilentlyContinue"`,
-							{ stdio: 'ignore' }
-						);
-
-						// 5. 使用robocopy镜像空目录技巧删除
-						const tempEmptyDir = path.join(
-							app.getPath('temp'),
-							'empty_dir_' + Date.now()
-						);
-						fs.mkdirSync(tempEmptyDir, { recursive: true });
-						execSync(
-							`robocopy "${tempEmptyDir}" "${dbPath}" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>&1`,
-							{ stdio: 'ignore' }
-						);
-						fs.rmdirSync(tempEmptyDir, { recursive: true });
-
-						logToFile('IndexedDB文件删除操作完成');
-					} catch (error) {
-						logToFile(
-							'删除过程中出现错误，但将继续启动应用:',
-							error
-						);
+				// 使用Node.js原生方法删除目录
+				try {
+					if (fs.existsSync(dbPath)) {
+						fs.rmSync(dbPath, { recursive: true, force: true });
+						// 重新创建空目录
+						fs.mkdirSync(dbPath, { recursive: true });
 					}
-				} else {
-					// macOS/Linux系统下的删除操作
-					try {
-						const { execSync } = require('child_process');
-						execSync(
-							`rm -rf "${dbPath}"/* && rm -rf "${dbPath}/.*" 2>/dev/null || true`,
-							{ stdio: 'ignore' }
-						);
-					} catch (error) {
-						logToFile(
-							'删除过程中出现错误，但将继续启动应用:',
-							error
-						);
-					}
+				} catch (error) {
+					logToFile('删除IndexedDB目录失败:', error);
 				}
+
+				// logToFile('开始删除IndexedDB文件...');
+				// // Windows系统下的删除操作
+				// if (process.platform === 'win32') {
+				// 	// 使用多种方法尝试删除文件
+				// 	const { execSync } = require('child_process');
+				// 	try {
+				// 		// 1. 关闭可能持有文件锁的进程
+				// 		execSync(
+				// 			`taskkill /F /IM leveldb.exe 2>nul || taskkill /F /IM *leveldb* 2>nul || echo No leveldb process found`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 2. 使用DEL命令强制删除
+				// 		execSync(
+				// 			`cmd /c "DEL /F /S /Q /A \"${dbPath}\\*.*\" >nul 2>&1"`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 3. 使用takeown和icacls获取权限
+				// 		execSync(
+				// 			`cmd /c "takeown /f \"${dbPath}\" /r /d y >nul 2>&1 && icacls \"${dbPath}\" /grant administrators:F /t /c /q >nul 2>&1"`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 4. 使用PowerShell强制删除
+				// 		execSync(
+				// 			`powershell -Command "Remove-Item -Path '${dbPath}/*' -Force -Recurse -ErrorAction SilentlyContinue"`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 5. 使用robocopy镜像空目录技巧删除
+				// 		const tempEmptyDir = path.join(
+				// 			app.getPath('temp'),
+				// 			'empty_dir_' + Date.now()
+				// 		);
+				// 		fs.mkdirSync(tempEmptyDir, { recursive: true });
+				// 		execSync(
+				// 			`robocopy "${tempEmptyDir}" "${dbPath}" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>&1`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		fs.rmdirSync(tempEmptyDir, { recursive: true });
+				// 		logToFile('IndexedDB文件删除操作完成');
+				// 	} catch (error) {
+				// 		logToFile(
+				// 			'删除过程中出现错误，但将继续启动应用:',
+				// 			error
+				// 		);
+				// 	}
+				// } else {
+				// 	// macOS/Linux系统下的删除操作
+				// 	try {
+				// 		const { execSync } = require('child_process');
+				// 		execSync(
+				// 			`rm -rf "${dbPath}"/* && rm -rf "${dbPath}/.*" 2>/dev/null || true`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 	} catch (error) {
+				// 		logToFile(
+				// 			'删除过程中出现错误，但将继续启动应用:',
+				// 			error
+				// 		);
+				// 	}
+				// }
 			}
 
 			// 删除标记文件
