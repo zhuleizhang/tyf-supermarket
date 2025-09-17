@@ -120,6 +120,19 @@ contextBridge.exposeInMainWorld('electron', {
 			ipcRenderer.removeListener('app-before-quit', listener);
 		};
 	},
+	// 添加应用加载事件监听方法
+	onAppLoaded: (callback) => {
+		// 添加事件监听
+		const listener = (event, data) => {
+			callback(data);
+		};
+		ipcRenderer.on('app-loaded', listener);
+
+		// 返回清理函数
+		return () => {
+			ipcRenderer.removeListener('app-loaded', listener);
+		};
+	},
 });
 
 // 为TypeScript提供类型定义支持

@@ -37,6 +37,8 @@ const AutoTimeoutWrapper: React.FC<{ children: React.ReactNode }> = ({
 
 function App() {
 	const shouldInLockPage = useConfigStore((s) => s.shouldInLockPage);
+	const loginPassword = useConfigStore((s) => s.loginPassword);
+	const autoLockMinutes = useConfigStore((s) => s.autoLockMinutes);
 	const setShouldInLockPage = useConfigStore((s) => s.setShouldInLockPage);
 
 	// 初始化数据
@@ -65,6 +67,34 @@ function App() {
 			return cleanup;
 		}
 	}, [setShouldInLockPage]);
+
+	// 添加平台检测逻辑
+	useEffect(() => {
+		// 检查是否在Electron环境中
+		if (window.electron?.onAppLoaded) {
+			// 注册应用加载完成的事件监听
+			const cleanup = window.electron.onAppLoaded((data) => {
+				console.log(`应用已加载，运行平台: ${data.platform}`);
+				// 可以根据平台类型执行不同的初始化逻辑
+				if (data.platform === 'windows') {
+					console.log('Windows平台特定初始化');
+					if (loginPassword && autoLockMinutes) {
+						setShouldInLockPage(true);
+					}
+					// Windows特定逻辑
+				} else if (data.platform === 'mac') {
+					console.log('Mac平台特定初始化');
+					// Mac特定逻辑
+				} else if (data.platform === 'linux') {
+					console.log('Linux平台特定初始化');
+					// Linux特定逻辑
+				}
+			});
+
+			// 组件卸载时清理事件监听
+			return cleanup;
+		}
+	}, []);
 
 	// 集成自动备份功能
 	useAutoBackup();

@@ -47,6 +47,13 @@ declare global {
 
 			// 添加应用退出前事件监听方法
 			onAppBeforeQuit: (callback: () => void) => () => void;
+
+			// 添加应用加载事件监听方法
+			onAppLoaded: (
+				callback: (data: {
+					platform: 'windows' | 'mac' | 'linux' | 'unknown';
+				}) => void
+			) => () => void;
 		};
 		process?: {
 			type?: string;
