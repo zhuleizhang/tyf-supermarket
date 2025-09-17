@@ -71,44 +71,50 @@ function App() {
 
 	return (
 		<ConfigProvider locale={zhCN}>
-			{shouldInLockPage && (
+			{shouldInLockPage ? (
 				<div className="absolute top-0 left-0 right-0 bottom-0">
 					<LockScreen></LockScreen>
 				</div>
+			) : (
+				<Router>
+					<AutoTimeoutWrapper>
+						<AppLayout>
+							<Routes>
+								<Route
+									path="/"
+									element={
+										<Navigate to="/checkout" replace />
+									}
+								/>
+								<Route
+									path="/checkout"
+									element={<CheckoutPage />}
+								/>
+								<Route
+									path="/products"
+									element={<ProductsPage />}
+								/>
+								<Route
+									path="/categories"
+									element={<CategoriesPage />}
+								/>
+								<Route
+									path="/statistics"
+									element={<StatisticsPage />}
+								/>
+								<Route
+									path="/orders"
+									element={<OrdersPage />}
+								/>
+								<Route
+									path="/settings"
+									element={<SettingsPage />}
+								/>
+							</Routes>
+						</AppLayout>
+					</AutoTimeoutWrapper>
+				</Router>
 			)}
-			<Router>
-				<AutoTimeoutWrapper>
-					<AppLayout>
-						<Routes>
-							<Route
-								path="/"
-								element={<Navigate to="/checkout" replace />}
-							/>
-							<Route
-								path="/checkout"
-								element={<CheckoutPage />}
-							/>
-							<Route
-								path="/products"
-								element={<ProductsPage />}
-							/>
-							<Route
-								path="/categories"
-								element={<CategoriesPage />}
-							/>
-							<Route
-								path="/statistics"
-								element={<StatisticsPage />}
-							/>
-							<Route path="/orders" element={<OrdersPage />} />
-							<Route
-								path="/settings"
-								element={<SettingsPage />}
-							/>
-						</Routes>
-					</AppLayout>
-				</AutoTimeoutWrapper>
-			</Router>
 		</ConfigProvider>
 	);
 }
