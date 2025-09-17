@@ -271,7 +271,10 @@ app.on('before-quit', () => {
 // 监听所有窗口关闭事件
 app.on('window-all-closed', function () {
 	// 在macOS上，除非用户用Cmd+Q显式退出，否则应用及其菜单栏通常会保持活动状态
-	if (process.platform !== 'darwin') app.quit();
+	// if (process.platform !== 'darwin') app.quit();
+
+	// 直接退出应用，不管是什么平台
+	app.quit();
 });
 
 // 在macOS上，当点击dock图标并且没有其他窗口打开时，通常会在应用中重新创建一个窗口
