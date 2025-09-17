@@ -109,6 +109,17 @@ contextBridge.exposeInMainWorld('electron', {
 			throw error;
 		}
 	},
+
+	// 添加应用退出前事件监听方法
+	onAppBeforeQuit: (callback) => {
+		const listener = () => callback();
+		ipcRenderer.on('app-before-quit', listener);
+
+		// 返回一个清理函数，用于移除事件监听
+		return () => {
+			ipcRenderer.removeListener('app-before-quit', listener);
+		};
+	},
 });
 
 // 为TypeScript提供类型定义支持

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -19,7 +20,39 @@ export interface ConfigState {
 	setAutoBackupDays: (days: number) => void;
 	// 设置商品销售排行显示的商品数量
 	setTopSellingProductsCount: (count: number) => void;
+	// 开机密码（加密存储）
+	loginPassword: string;
+	// 设置开机密码
+	setLoginPassword: (password: string) => void;
+	// 无操作后自动锁定时间（分钟）
+	autoLockMinutes: number;
+	// 设置自动锁定时间
+	setAutoLockMinutes: (minutes: number) => void;
+	// 密码失败尝试次数
+	failedAttempts: number;
+	// 增加失败尝试次数
+	incrementFailedAttempts: () => void;
+	// 重置失败尝试次数
+	resetFailedAttempts: () => void;
+	// 是否应该在锁屏页面
+	shouldInLockPage: boolean;
+	// 是否应该在锁屏页面
+	setShouldInLockPage: (b: boolean) => void;
 }
+
+// 简单的加密函数
+export const encryptPassword = (password: string): string => {
+	return btoa(password); // 使用Base64编码作为简单加密
+};
+
+// 简单的解密函数
+export const decryptPassword = (encryptedPassword: string): string => {
+	try {
+		return atob(encryptedPassword);
+	} catch (error) {
+		return '';
+	}
+};
 
 // 创建配置 store
 export const useConfigStore = create<ConfigState>()(
@@ -51,6 +84,25 @@ export const useConfigStore = create<ConfigState>()(
 			setTopSellingProductsCount: (count: number) => {
 				set({ topSellingProductsCount: count });
 			},
+
+			// 开机密码相关
+			loginPassword: '',
+			setLoginPassword: (password: string) =>
+				set({
+					loginPassword: password ? encryptPassword(password) : '',
+				}),
+			autoLockMinutes: 5,
+			setAutoLockMinutes: (minutes: number) =>
+				set({ autoLockMinutes: minutes }),
+			failedAttempts: 0,
+			incrementFailedAttempts: () =>
+				set((state) => ({ failedAttempts: state.failedAttempts + 1 })),
+			resetFailedAttempts: () => set({ failedAttempts: 0 }),
+			shouldInLockPage: false,
+			setShouldInLockPage: (b: boolean) =>
+				set({
+					shouldInLockPage: Boolean(b),
+				}),
 		}),
 		{
 			name: 'supermarket-config', // 本地存储的键名

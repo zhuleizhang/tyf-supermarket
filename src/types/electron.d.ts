@@ -44,6 +44,9 @@ declare global {
 			}>;
 			// 添加重启应用方法
 			reload: () => Promise<void>;
+
+			// 添加应用退出前事件监听方法
+			onAppBeforeQuit: (callback: () => void) => () => void;
 		};
 		process?: {
 			type?: string;

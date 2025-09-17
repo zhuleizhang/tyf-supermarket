@@ -2,22 +2,39 @@ import React, { useState, useEffect } from 'react';
 import DataBackupRestore from '../components/DataBackupRestore';
 import BulkProductCreate from '../components/BulkProductCreate';
 import { useConfigStore } from '../store/config-store';
-import { InputNumber, message, Spin, Progress, Modal, Button } from 'antd';
+import {
+	InputNumber,
+	message,
+	Spin,
+	Progress,
+	Modal,
+	Button,
+	Input,
+} from 'antd';
+import { LockOutlined } from '@ant-design/icons';
 import Page from '@/components/Page';
 import { orderService, dbUtils, autoExportData } from '../db';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useCartStore } from '@/store';
 
 const SettingsPage: React.FC = () => {
+	const [newPassword, setNewPassword] = useState<string>('');
+	const [confirmPassword, setConfirmPassword] = useState<string>('');
+	const [passwordInputKey, setPasswordInputKey] = useState<number>(0);
+
 	const {
 		autoReturnToCheckoutMinutes,
 		autoEnterCheckoutModeMinutes,
 		autoBackupDays,
 		topSellingProductsCount,
+		loginPassword,
+		autoLockMinutes,
 		setAutoReturnToCheckoutMinutes,
 		setAutoEnterCheckoutModeMinutes,
 		setAutoBackupDays,
 		setTopSellingProductsCount,
+		setLoginPassword,
+		setAutoLockMinutes,
 	} = useConfigStore();
 
 	const clearCart = useCartStore((s) => s.clearCart);
@@ -61,6 +78,47 @@ const SettingsPage: React.FC = () => {
 			setTopSellingProductsCount(value);
 			message.success('销售排行商品数量已更新');
 		}
+	};
+
+	// 处理开机密码设置
+	const handlePasswordSubmit = () => {
+		if (newPassword !== confirmPassword) {
+			message.error('两次输入的密码不一致');
+			return;
+		}
+
+		setLoginPassword(newPassword);
+		message.success('开机密码已更新');
+
+		// 重置输入框
+		setNewPassword('');
+		setConfirmPassword('');
+		setPasswordInputKey((prev) => prev + 1);
+	};
+
+	// 处理自动锁定时间变化
+	const handleAutoLockChange = (value: number) => {
+		if (value >= 0) {
+			setAutoLockMinutes(value);
+			message.success('自动锁定时间已更新');
+		}
+	};
+
+	// 清除密码
+	const handleClearPassword = () => {
+		Modal.confirm({
+			title: '清除密码确认',
+			content: '确定要清除开机密码吗？清除后系统将不再自动锁定。',
+			okText: '确定清除',
+			cancelText: '取消',
+			onOk: () => {
+				setLoginPassword('');
+				setNewPassword('');
+				setConfirmPassword('');
+				setPasswordInputKey((prev) => prev + 1);
+				message.success('开机密码已清除');
+			},
+		});
 	};
 
 	// 格式化字节大小为可读格式
@@ -376,6 +434,89 @@ const SettingsPage: React.FC = () => {
 								设置销售排行显示的商品数量，至少为1个，默认10个
 							</p>
 						</div>
+
+						{/* 开机密码设置 */}
+						<div className="flex flex-col space-y-3">
+							<div className="flex justify-between items-center">
+								<label
+									className="text-gray-700 font-medium"
+									id="loginPassword"
+								>
+									开机密码
+								</label>
+								{loginPassword && (
+									<Button
+										danger
+										size="small"
+										onClick={handleClearPassword}
+									>
+										清除密码
+									</Button>
+								)}
+							</div>
+							<div className="space-y-3">
+								<Input.Password
+									key={passwordInputKey}
+									prefix={<LockOutlined />}
+									placeholder={
+										loginPassword
+											? '当前已设置密码，请输入新密码或保持为空'
+											: '请设置开机密码'
+									}
+									value={newPassword}
+									onChange={(e) =>
+										setNewPassword(e.target.value)
+									}
+									visibilityToggle
+									autoComplete="new-password"
+								/>
+								<Input.Password
+									prefix={<LockOutlined />}
+									placeholder="请确认密码"
+									value={confirmPassword}
+									onChange={(e) =>
+										setConfirmPassword(e.target.value)
+									}
+									visibilityToggle
+									autoComplete="new-password"
+								/>
+								<Button
+									type="primary"
+									onClick={handlePasswordSubmit}
+									className="w-full"
+								>
+									{loginPassword ? '修改密码' : '设置密码'}
+								</Button>
+							</div>
+							<p className="text-gray-500 text-sm">
+								设置为空表示不使用密码锁定功能
+							</p>
+						</div>
+
+						{/* 自动锁定时间设置 */}
+						{loginPassword && (
+							<div className="flex flex-col space-y-2">
+								<label
+									className="text-gray-700 font-medium"
+									id="autoLockMinutes"
+								>
+									无操作后自动锁定时间
+								</label>
+								<div className="flex items-center space-x-3">
+									<InputNumber
+										id="autoLockMinutes"
+										type="number"
+										min={0}
+										value={autoLockMinutes}
+										onChange={handleAutoLockChange}
+									/>
+									<span className="text-gray-600">分钟</span>
+								</div>
+								<p className="text-gray-500 text-sm">
+									设置为0表示禁用自动锁定功能，默认5分钟
+								</p>
+							</div>
+						)}
 					</div>
 				</div>
 
