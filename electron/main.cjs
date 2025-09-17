@@ -5,6 +5,9 @@ const fs = require('fs');
 // 导入package.json获取版本号
 const packageJson = require(path.join(__dirname, '../package.json'));
 
+// 在顶部import后添加一个常量定义删除标记文件路径
+const DELETE_FLAG_FILE = 'delete_indexeddb_flag';
+
 const getNowTimeString = () =>
 	new Date()
 		.toLocaleString('zh-CN', {
@@ -63,7 +66,7 @@ function createWindow() {
 		height: 800,
 		minWidth: 1024,
 		minHeight: 768,
-		title: '小型超市商品价格管理系统',
+		title: '好客来',
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.cjs'),
 			nodeIntegration: false,
@@ -248,34 +251,6 @@ function createMenu() {
 	const menu = Menu.buildFromTemplate(template);
 	Menu.setApplicationMenu(menu);
 }
-
-// 监听应用准备就绪事件
-app.whenReady().then(createWindow);
-
-// 在app.on('window-all-closed')事件之前添加beforeQuit事件监听
-// 监听应用即将退出事件
-app.on('before-quit', () => {
-	logToFile('应用即将退出...');
-	// 向渲染进程发送应用即将退出的消息
-	if (mainWindow && !mainWindow.isDestroyed()) {
-		mainWindow.webContents.send('app-before-quit');
-
-		// 给渲染进程一点时间来处理锁定操作
-		const startTime = Date.now();
-		while (Date.now() - startTime < 300) {
-			// 简单延迟，确保渲染进程有时间处理
-		}
-	}
-});
-
-// 监听所有窗口关闭事件
-app.on('window-all-closed', function () {
-	// 在macOS上，除非用户用Cmd+Q显式退出，否则应用及其菜单栏通常会保持活动状态
-	// if (process.platform !== 'darwin') app.quit();
-
-	// 直接退出应用，不管是什么平台
-	app.quit();
-});
 
 // 在macOS上，当点击dock图标并且没有其他窗口打开时，通常会在应用中重新创建一个窗口
 app.on('activate', function () {
@@ -469,8 +444,7 @@ ipcMain.handle('getIndexedDBSize', async () => {
 	}
 });
 
-// 添加在现有IPC处理函数后面
-// 修改compactIndexedDB处理函数，使用Windows专用的强力删除方案
+// 修改compactIndexedDB处理函数
 ipcMain.handle('compactIndexedDB', async () => {
 	try {
 		const userDataPath = app.getPath('userData');
@@ -481,6 +455,13 @@ ipcMain.handle('compactIndexedDB', async () => {
 			return { success: false, message: 'IndexedDB目录不存在' };
 		}
 
+		// 创建标记文件
+		const flagFilePath = path.join(userDataPath, DELETE_FLAG_FILE);
+
+		// 写入标记文件
+		fs.writeFileSync(flagFilePath, 'delete', 'utf8');
+		logToFile('已创建IndexedDB删除标记文件:', flagFilePath);
+
 		// Windows系统专用的终极强制删除函数
 		const windowsUltimateDelete = (dirPath) => {
 			return new Promise((resolve, reject) => {
@@ -488,64 +469,59 @@ ipcMain.handle('compactIndexedDB', async () => {
 				let command = '';
 
 				if (process.platform === 'win32') {
-					// 方案1: 使用Windows的DEL命令配合/F参数强制删除只读文件
-					const deleteCommand1 = `cmd /c "cd /d \"${dirPath}\" && DEL /F /S /Q /A *.* 2>nul"`;
+					// 首先尝试关闭可能持有文件锁的进程
+					// 1. 使用Sysinternals工具包中的Handle或Process Explorer（需要单独下载）
+					// 2. 使用Windows资源工具包中的命令
 
-					// 方案2: 使用takeown获取所有权，icacls授予权限
-					const deleteCommand2 = `cmd /c "takeown /f \"${dirPath}\" /r /d y && icacls \"${dirPath}\" /grant administrators:F /t /c /q"`;
+					// 方案1: 使用taskkill关闭可能持有锁的进程（谨慎使用）
+					const killProcessCommand = `taskkill /F /IM leveldb.exe 2>nul || taskkill /F /IM *leveldb* 2>nul || echo No leveldb process found`;
 
-					// 方案3: 使用PowerShell的Remove-Item命令，带有-Force和-Recurse参数
-					const deleteCommand3 = `powershell -Command "Remove-Item -Path '${dirPath}' -Force -Recurse -ErrorAction SilentlyContinue"`;
+					// 方案2: 使用Windows的DEL命令配合/F参数强制删除只读文件
+					const deleteCommand1 = `cmd /c "cd /d \"${dirPath}\" && DEL /F /S /Q /A *.* >nul 2>&1"`;
 
-					// 方案4: 最后再尝试重新创建目录
-					const recreateCommand = `cmd /c "if not exist \"${dirPath}\" mkdir \"${dirPath}\""`;
+					// 方案3: 使用takeown获取所有权，icacls授予权限
+					const deleteCommand2 = `cmd /c "takeown /f \"${dirPath}\" /r /d y >nul 2>&1 && icacls \"${dirPath}\" /grant administrators:F /t /c /q >nul 2>&1"`;
 
-					// 组合所有命令，用&&连接，一个失败就尝试下一个
-					command = `${deleteCommand1} && ${deleteCommand3} || ${deleteCommand2} && ${deleteCommand3} && ${recreateCommand}`;
+					// 方案4: 使用PowerShell的Remove-Item命令，带有-Force和-Recurse参数
+					const deleteCommand3 = `powershell -Command "Remove-Item -Path '${dirPath}/*' -Force -Recurse -ErrorAction SilentlyContinue"`;
+
+					// 方案5: 使用robocopy删除技巧（创建空目录并镜像到目标位置）
+					const tempEmptyDir = path.join(
+						app.getPath('temp'),
+						'empty_dir_' + Date.now()
+					);
+					const createEmptyDirCommand = `mkdir "${tempEmptyDir}" >nul 2>&1`;
+					const robocopyCommand = `robocopy "${tempEmptyDir}" "${dirPath}" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>&1`;
+					const removeEmptyDirCommand = `rmdir "${tempEmptyDir}" >nul 2>&1`;
+
+					// 组合所有命令，使用 & 连接，按顺序执行所有命令，无论成功失败
+					command = `${killProcessCommand} & ${deleteCommand1} & ${deleteCommand2} & ${deleteCommand3} & ${createEmptyDirCommand} & ${robocopyCommand} & ${removeEmptyDirCommand}`;
 				} else {
 					// macOS/Linux系统：使用rm -rf强制删除
 					command = `rm -rf "${dirPath}"/* && rm -rf "${dirPath}/.*" 2>/dev/null || true`;
 				}
 
 				logToFile(`执行Windows终极删除命令: ${command}`);
-				exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
-					// 即使命令返回错误，我们也检查目录是否实际上被清空了
-					try {
-						const files = fs.readdirSync(dirPath);
-						const isEmpty =
-							files.length === 0 ||
-							(files.length === 1 && files[0] === '.DS_Store'); // macOS特殊情况
+				exec(command, { timeout: 60000 }, (error, stdout, stderr) => {
+					// 即使命令返回错误，我们也认为已经尽力了
 
-						if (isEmpty) {
-							logToFile('目录已成功清空，忽略命令错误');
-							resolve();
-						} else {
-							logToFile(
-								`目录未清空，剩余文件: ${files.join(', ')}`
-							);
-							if (error) {
-								reject(error);
-							} else {
-								reject(new Error('命令执行成功但目录未清空'));
-							}
-						}
-					} catch (checkError) {
-						logToFile('检查目录状态失败:', checkError.message);
-						if (error) {
-							reject(error);
-						} else {
-							resolve();
-						}
-					}
+					logToFile('error', error);
+					logToFile('stdout', stdout);
+					logToFile('stderr', stderr);
+					logToFile('删除命令执行完成，忽略可能的错误');
+					resolve();
 				});
 			});
 		};
 
-		logToFile('开始终极强制删除旧的IndexedDB文件...');
-		await windowsUltimateDelete(dbPath);
-		logToFile('旧的IndexedDB文件已终极强制删除');
+		// logToFile('开始终极强制删除旧的IndexedDB文件...');
+		// await windowsUltimateDelete(dbPath);
+		// logToFile('旧的IndexedDB文件已尝试删除，不管结果如何都继续');
 
-		return { success: true, message: '数据库文件已终极强制删除成功' };
+		return {
+			success: true,
+			message: '数据库文件已尝试删除，如果仍有问题，请尝试重启应用或电脑',
+		};
 	} catch (error) {
 		logToFile('数据库终极强制删除处理失败:', error);
 		return {
@@ -573,4 +549,138 @@ ipcMain.handle('reload', async () => {
 		logToFile('重启应用失败:', error);
 		throw error;
 	}
+});
+
+// 在app.whenReady()之前添加文件删除检查逻辑
+// 检查是否需要删除IndexedDB文件
+const checkAndDeleteIndexedDB = () => {
+	try {
+		const userDataPath = app.getPath('userData');
+		const flagFilePath = path.join(userDataPath, DELETE_FLAG_FILE);
+
+		// 检查标记文件是否存在
+		if (fs.existsSync(flagFilePath)) {
+			logToFile('检测到删除标记文件，准备删除IndexedDB文件');
+
+			// 获取IndexedDB路径
+			const dbPath = path.join(userDataPath, 'IndexedDB');
+
+			// 如果IndexedDB目录存在，执行删除操作
+			if (fs.existsSync(dbPath)) {
+				logToFile('开始删除IndexedDB文件...');
+
+				// 使用Node.js原生方法删除目录
+				try {
+					if (fs.existsSync(dbPath)) {
+						fs.rmSync(dbPath, { recursive: true, force: true });
+						// 重新创建空目录
+						fs.mkdirSync(dbPath, { recursive: true });
+					}
+				} catch (error) {
+					logToFile('删除IndexedDB目录失败:', error);
+				}
+
+				// logToFile('开始删除IndexedDB文件...');
+				// // Windows系统下的删除操作
+				// if (process.platform === 'win32') {
+				// 	// 使用多种方法尝试删除文件
+				// 	const { execSync } = require('child_process');
+				// 	try {
+				// 		// 1. 关闭可能持有文件锁的进程
+				// 		execSync(
+				// 			`taskkill /F /IM leveldb.exe 2>nul || taskkill /F /IM *leveldb* 2>nul || echo No leveldb process found`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 2. 使用DEL命令强制删除
+				// 		execSync(
+				// 			`cmd /c "DEL /F /S /Q /A \"${dbPath}\\*.*\" >nul 2>&1"`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 3. 使用takeown和icacls获取权限
+				// 		execSync(
+				// 			`cmd /c "takeown /f \"${dbPath}\" /r /d y >nul 2>&1 && icacls \"${dbPath}\" /grant administrators:F /t /c /q >nul 2>&1"`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 4. 使用PowerShell强制删除
+				// 		execSync(
+				// 			`powershell -Command "Remove-Item -Path '${dbPath}/*' -Force -Recurse -ErrorAction SilentlyContinue"`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		// 5. 使用robocopy镜像空目录技巧删除
+				// 		const tempEmptyDir = path.join(
+				// 			app.getPath('temp'),
+				// 			'empty_dir_' + Date.now()
+				// 		);
+				// 		fs.mkdirSync(tempEmptyDir, { recursive: true });
+				// 		execSync(
+				// 			`robocopy "${tempEmptyDir}" "${dbPath}" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>&1`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 		fs.rmdirSync(tempEmptyDir, { recursive: true });
+				// 		logToFile('IndexedDB文件删除操作完成');
+				// 	} catch (error) {
+				// 		logToFile(
+				// 			'删除过程中出现错误，但将继续启动应用:',
+				// 			error
+				// 		);
+				// 	}
+				// } else {
+				// 	// macOS/Linux系统下的删除操作
+				// 	try {
+				// 		const { execSync } = require('child_process');
+				// 		execSync(
+				// 			`rm -rf "${dbPath}"/* && rm -rf "${dbPath}/.*" 2>/dev/null || true`,
+				// 			{ stdio: 'ignore' }
+				// 		);
+				// 	} catch (error) {
+				// 		logToFile(
+				// 			'删除过程中出现错误，但将继续启动应用:',
+				// 			error
+				// 		);
+				// 	}
+				// }
+			}
+
+			// 删除标记文件
+			fs.unlinkSync(flagFilePath);
+			logToFile('删除标记文件已移除');
+		}
+	} catch (error) {
+		logToFile('检查和删除IndexedDB过程中出现错误:', error);
+		// 即使出错也继续启动应用
+	}
+};
+
+// 在app.on('window-all-closed')事件之前添加beforeQuit事件监听
+// 监听应用即将退出事件
+app.on('before-quit', () => {
+	logToFile('应用即将退出...');
+	// 向渲染进程发送应用即将退出的消息
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		mainWindow.webContents.send('app-before-quit');
+
+		// 给渲染进程一点时间来处理锁定操作
+		const startTime = Date.now();
+		while (Date.now() - startTime < 300) {
+			// 简单延迟，确保渲染进程有时间处理
+		}
+	}
+});
+
+// 监听所有窗口关闭事件
+app.on('window-all-closed', function () {
+	// 在macOS上，除非用户用Cmd+Q显式退出，否则应用及其菜单栏通常会保持活动状态
+	// if (process.platform !== 'darwin') app.quit();
+
+	// 直接退出应用，不管是什么平台
+	app.quit();
+});
+
+// 监听应用准备就绪事件
+// 在应用准备就绪前执行删除检查
+app.whenReady().then(() => {
+	// 首先执行删除检查
+	checkAndDeleteIndexedDB();
+	// 然后创建窗口
+	createWindow();
 });
