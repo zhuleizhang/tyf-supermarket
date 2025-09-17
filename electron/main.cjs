@@ -672,6 +672,17 @@ app.on('window-all-closed', function () {
 	// 在macOS上，除非用户用Cmd+Q显式退出，否则应用及其菜单栏通常会保持活动状态
 	// if (process.platform !== 'darwin') app.quit();
 
+	// 向渲染进程发送应用即将退出的消息
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		mainWindow.webContents.send('app-before-quit');
+
+		// 给渲染进程一点时间来处理锁定操作
+		const startTime = Date.now();
+		while (Date.now() - startTime < 300) {
+			// 简单延迟，确保渲染进程有时间处理
+		}
+	}
+
 	// 直接退出应用，不管是什么平台
 	app.quit();
 });
