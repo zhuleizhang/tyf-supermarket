@@ -133,6 +133,16 @@ contextBridge.exposeInMainWorld('electron', {
 			ipcRenderer.removeListener('app-loaded', listener);
 		};
 	},
+
+	// 添加日志到文件
+	logToFile: async (...logData) => {
+		try {
+			return await ipcRenderer.invoke('logToFile', ...logData);
+		} catch (error) {
+			console.error('调用日志记录失败:', error);
+			throw error;
+		}
+	},
 });
 
 // 为TypeScript提供类型定义支持

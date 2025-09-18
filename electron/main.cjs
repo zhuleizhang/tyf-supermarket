@@ -94,8 +94,8 @@ function createWindow() {
 				logToFile('[Electron] 开发服务器加载成功');
 
 				// 确保打开开发者工具
-				mainWindow.webContents.openDevTools();
-				logToFile('[Electron] 开发者工具已打开');
+				// mainWindow.webContents.openDevTools();
+				// logToFile('[Electron] 开发者工具已打开');
 			} else {
 				const filePath = path.join(__dirname, '../dist/index.html');
 				logToFile(`[Electron] 正在生产模式下加载应用: ${filePath}`);
@@ -563,6 +563,17 @@ ipcMain.handle('reload', async () => {
 	} catch (error) {
 		logToFile('重启应用失败:', error);
 		throw error;
+	}
+});
+
+// 添加IPC监听器，接收渲染进程发送的日志信息并写入日志文件
+ipcMain.handle('logToFile', async (event, ...logData) => {
+	try {
+		logToFile(...logData);
+		return { success: true };
+	} catch (error) {
+		console.error('处理渲染进程日志请求失败:', error);
+		return { success: false, error: error.message };
 	}
 });
 

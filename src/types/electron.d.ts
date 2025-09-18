@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
 	interface Window {
 		electron: {
@@ -54,6 +55,10 @@ declare global {
 					platform: 'windows' | 'mac' | 'linux' | 'unknown';
 				}) => void
 			) => () => void;
+			// 添加日志到文件
+			logToFile: (
+				...logData: any[]
+			) => Promise<{ success: boolean; error?: string }>;
 		};
 		process?: {
 			type?: string;

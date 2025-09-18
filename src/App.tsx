@@ -23,6 +23,7 @@ import dayjs from 'dayjs';
 // 导入dayjs中文locale
 import 'dayjs/locale/zh-cn';
 import { useConfigStore } from './store/config-store.ts';
+import { logToFile } from './utils/index.ts';
 // 设置dayjs默认使用中文
 dayjs.locale('zh-cn');
 
@@ -60,7 +61,8 @@ function App() {
 			// 注册应用退出前的事件监听
 			const cleanup = window.electron.onAppBeforeQuit(() => {
 				console.log('应用即将退出，锁定屏幕');
-				setShouldInLockPage(true);
+				logToFile('应用即将退出，锁定屏幕');
+				// setShouldInLockPage(true);
 			});
 
 			// 组件卸载时清理事件监听
@@ -75,12 +77,15 @@ function App() {
 			// 注册应用加载完成的事件监听
 			const cleanup = window.electron.onAppLoaded((data) => {
 				console.log(`应用已加载，运行平台: ${data.platform}`);
+				if (loginPassword && autoLockMinutes) {
+					setShouldInLockPage(true);
+					logToFile(
+						`应用已加载，检测到有锁屏密码，自动锁屏。运行平台: ${data.platform}`
+					);
+				}
 				// 可以根据平台类型执行不同的初始化逻辑
 				if (data.platform === 'windows') {
 					console.log('Windows平台特定初始化');
-					if (loginPassword && autoLockMinutes) {
-						setShouldInLockPage(true);
-					}
 					// Windows特定逻辑
 				} else if (data.platform === 'mac') {
 					console.log('Mac平台特定初始化');

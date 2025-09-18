@@ -32,7 +32,6 @@ const LockScreen: React.FC = () => {
 	// 处理密码输入变化
 	const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setPassword(e.target.value);
-		console.log(e.target.value, '');
 	};
 
 	// 处理密码验证提交
@@ -51,7 +50,8 @@ const LockScreen: React.FC = () => {
 					notification.warning({
 						message: '系统解锁成功',
 						description: `锁屏期间有 ${failedAttempts} 次密码输入失败尝试。`,
-						duration: 0,
+						duration: 10,
+						showProgress: true,
 					});
 					// 重置失败尝试次数
 					resetFailedAttempts();
@@ -67,7 +67,9 @@ const LockScreen: React.FC = () => {
 
 				// 重新聚焦密码输入框
 				if (passwordInputRef.current) {
-					passwordInputRef.current.focus();
+					setTimeout(() => {
+						passwordInputRef.current.focus();
+					});
 				}
 			}
 		} catch (error) {
@@ -100,12 +102,11 @@ const LockScreen: React.FC = () => {
 							ref={passwordInputRef}
 							prefix={<LockOutlined />}
 							type="password"
-							placeholder="请输入开机密码"
+							placeholder="请输入解锁密码"
 							value={password}
 							onChange={handlePasswordChange}
 							autoComplete="current-password"
-							maxLength={20}
-							className="h-12"
+							size="large"
 						/>
 					</Form.Item>
 

@@ -1,9 +1,28 @@
-import { initDB } from '@/db';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { categoryService, initDB } from '@/db';
 import { message, Modal } from 'antd';
 import { importDataFromFilePath } from '@/db/backupRestore';
 
 export const bootstrap = async () => {
 	initDB();
+
+	(window as any).initCategory = async (data: string[]) => {
+		if (!Array.isArray(data)) {
+			data = [data];
+		}
+		for (const category of data) {
+			// 检查分类是否已存在
+			const existingCategory = await categoryService.getByName(category);
+			if (!existingCategory) {
+				const newCategory = await categoryService.add({
+					name: category,
+				});
+				console.log(`创建分类: ${category}, ID: ${newCategory.id}`);
+			} else {
+				console.log(`分类 ${category} 已存在！`);
+			}
+		}
+	};
 
 	// 检查是否有待恢复的备份
 	const pendingRestorePath = localStorage.getItem('pendingRestore');
