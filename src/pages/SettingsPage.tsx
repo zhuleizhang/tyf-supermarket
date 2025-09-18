@@ -17,7 +17,7 @@ import { orderService, dbUtils, autoExportData } from '../db';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useCartStore } from '@/store';
 
-const MaxFailedAttempts = 5;
+const MinFailedAttempts = 5;
 
 const SettingsPage: React.FC = () => {
 	const [newPassword, setNewPassword] = useState<string>('');
@@ -325,12 +325,12 @@ const SettingsPage: React.FC = () => {
 
 	// 处理最大失败尝试次数变化
 	const handleMaxFailedAttemptsChange = (value: number) => {
-		if (value >= MaxFailedAttempts) {
+		if (value >= MinFailedAttempts) {
 			// 设置最小值为3次，避免用户设置过低导致体验不佳
 			setMaxFailedAttempts(value);
 			message.success('最大密码失败尝试次数已更新');
 		} else {
-			message.warning(`最大失败尝试次数不能少于${MaxFailedAttempts}次`);
+			message.warning(`最大失败尝试次数不能少于${MinFailedAttempts}次`);
 		}
 	};
 
@@ -543,7 +543,7 @@ const SettingsPage: React.FC = () => {
 							</label>
 							<div className="flex items-center space-x-3">
 								<InputNumber
-									min={MaxFailedAttempts}
+									min={MinFailedAttempts}
 									max={20}
 									value={maxFailedAttempts}
 									onChange={handleMaxFailedAttemptsChange}
@@ -551,7 +551,7 @@ const SettingsPage: React.FC = () => {
 								<span className="text-gray-600">次</span>
 							</div>
 							<p className="text-gray-500 mb-2">
-								超过此次数后，系统将锁定5分钟不允许输入密码
+								超过此次数后，系统将5分钟不允许输入密码
 							</p>
 						</div>
 					</div>

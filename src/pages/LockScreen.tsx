@@ -225,7 +225,7 @@ const LockScreen: React.FC = () => {
 				{isInputLockedOut() && (
 					<div className="mt-4">
 						<Alert
-							message={`密码错误次数过多，系统已锁定 ${formatRemainingTime()} 后可重试`}
+							message={`密码错误次数过多，${formatRemainingTime()} 后可重试`}
 							type="error"
 							showIcon
 						/>
