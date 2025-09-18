@@ -4,47 +4,47 @@ import { persist } from 'zustand/middleware';
 
 // 定义配置接口
 export interface ConfigState {
-	// 多少分钟未操作后自动回到收银结算页面
+	/** 多少分钟未操作后自动回到收银结算页面 */
 	autoReturnToCheckoutMinutes: number;
-	// 多少分钟未操作自动进入收银模式
+	/** 多少分钟未操作自动进入收银模式 */
 	autoEnterCheckoutModeMinutes: number;
-	// 每多少天自动备份一次数据
+	/** 每多少天自动备份一次数据 */
 	autoBackupDays: number;
-	// 商品销售排行显示的商品数量
+	/** 商品销售排行显示的商品数量 */
 	topSellingProductsCount: number;
-	// 设置自动返回收银页面的时间
+	/** 设置自动返回收银页面的时间 */
 	setAutoReturnToCheckoutMinutes: (minutes: number) => void;
-	// 设置自动进入收银模式的时间
+	/** 设置自动进入收银模式的时间 */
 	setAutoEnterCheckoutModeMinutes: (minutes: number) => void;
-	// 设置自动备份的天数
+	/** 设置自动备份的天数 */
 	setAutoBackupDays: (days: number) => void;
-	// 设置商品销售排行显示的商品数量
+	/** 设置商品销售排行显示的商品数量 */
 	setTopSellingProductsCount: (count: number) => void;
-	// 开机密码（加密存储）
+	/** 开机密码（加密存储） */
 	loginPassword: string;
-	// 设置开机密码
+	/** 设置开机密码 */
 	setLoginPassword: (password: string) => void;
-	// 无操作后自动锁定时间（分钟）
+	/** 无操作后自动锁定时间（分钟） */
 	autoLockMinutes: number;
-	// 设置自动锁定时间
+	/** 设置自动锁定时间 */
 	setAutoLockMinutes: (minutes: number) => void;
-	// 密码失败尝试次数
+	/** 密码失败尝试次数 */
 	failedAttempts: number;
-	// 增加失败尝试次数
+	/** 增加失败尝试次数 */
 	incrementFailedAttempts: () => void;
-	// 重置失败尝试次数
+	/** 重置失败尝试次数 */
 	resetFailedAttempts: () => void;
-	// 是否应该在锁屏页面
+	/** 是否应该在锁屏页面 */
 	shouldInLockPage: boolean;
-	// 是否应该在锁屏页面
+	/** 设置是否应该在锁屏页面 */
 	setShouldInLockPage: (b: boolean) => void;
-	// 最大失败尝试次数
+	/** 最大失败尝试次数 */
 	maxFailedAttempts: number;
-	// 设置最大失败尝试次数
+	/** 设置最大失败尝试次数 */
 	setMaxFailedAttempts: (count: number) => void;
-	// 锁定结束时间戳
+	/** 锁定结束时间戳 */
 	lockoutEndTime: number | null;
-	// 设置锁定结束时间
+	/** 设置锁定结束时间 */
 	setLockoutEndTime: (timestamp: number | null) => void;
 	/** 检查密码输入是否处于锁定状态 */
 	isInputLockedOut: () => boolean;

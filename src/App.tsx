@@ -39,7 +39,6 @@ const AutoTimeoutWrapper: React.FC<{ children: React.ReactNode }> = ({
 function App() {
 	const shouldInLockPage = useConfigStore((s) => s.shouldInLockPage);
 	const loginPassword = useConfigStore((s) => s.loginPassword);
-	const autoLockMinutes = useConfigStore((s) => s.autoLockMinutes);
 	const setShouldInLockPage = useConfigStore((s) => s.setShouldInLockPage);
 
 	// 初始化数据
@@ -62,7 +61,6 @@ function App() {
 			const cleanup = window.electron.onAppBeforeQuit(() => {
 				console.log('应用即将退出，锁定屏幕');
 				logToFile('应用即将退出，锁定屏幕');
-				// setShouldInLockPage(true);
 			});
 
 			// 组件卸载时清理事件监听
@@ -77,7 +75,7 @@ function App() {
 			// 注册应用加载完成的事件监听
 			const cleanup = window.electron.onAppLoaded((data) => {
 				console.log(`应用已加载，运行平台: ${data.platform}`);
-				if (loginPassword && autoLockMinutes) {
+				if (loginPassword) {
 					setShouldInLockPage(true);
 					logToFile(
 						`应用已加载，检测到有锁屏密码，自动锁屏。运行平台: ${data.platform}`

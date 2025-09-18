@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DataBackupRestore from '../components/DataBackupRestore';
 import BulkProductCreate from '../components/BulkProductCreate';
-import { useConfigStore } from '../store/config-store';
+import { useConfigStore, decryptPassword } from '../store/config-store';
 import {
 	InputNumber,
 	message,
@@ -20,6 +20,7 @@ import { useCartStore } from '@/store';
 const MinFailedAttempts = 5;
 
 const SettingsPage: React.FC = () => {
+	const [oldPassword, setOldPassword] = useState<string>('');
 	const [newPassword, setNewPassword] = useState<string>('');
 	const [confirmPassword, setConfirmPassword] = useState<string>('');
 	const [passwordInputKey, setPasswordInputKey] = useState<number>(0);
@@ -87,6 +88,17 @@ const SettingsPage: React.FC = () => {
 
 	// 处理开机密码设置
 	const handlePasswordSubmit = () => {
+		// 如果已设置密码，需要验证旧密码
+		if (loginPassword) {
+			// 验证旧密码是否正确
+			const decryptedPassword = decryptPassword(loginPassword);
+			if (oldPassword !== decryptedPassword) {
+				message.error('旧密码不正确');
+				return;
+			}
+		}
+
+		// 验证新密码与确认密码是否一致
 		if (newPassword !== confirmPassword) {
 			message.error('两次输入的密码不一致');
 			return;
@@ -96,6 +108,7 @@ const SettingsPage: React.FC = () => {
 		message.success('开机密码已更新');
 
 		// 重置输入框
+		setOldPassword('');
 		setNewPassword('');
 		setConfirmPassword('');
 		setPasswordInputKey((prev) => prev + 1);
@@ -103,27 +116,12 @@ const SettingsPage: React.FC = () => {
 
 	// 处理自动锁定时间变化
 	const handleAutoLockChange = (value: number) => {
-		if (value >= 0) {
+		if (value > 0) {
 			setAutoLockMinutes(value);
 			message.success('自动锁定时间已更新');
+		} else {
+			message.success('自动锁定时间不能小于1分钟');
 		}
-	};
-
-	// 清除密码
-	const handleClearPassword = () => {
-		Modal.confirm({
-			title: '清除密码确认',
-			content: '确定要清除开机密码吗？清除后系统将不再自动锁定。',
-			okText: '确定清除',
-			cancelText: '取消',
-			onOk: () => {
-				setLoginPassword('');
-				setNewPassword('');
-				setConfirmPassword('');
-				setPasswordInputKey((prev) => prev + 1);
-				message.success('开机密码已清除');
-			},
-		});
 	};
 
 	// 格式化字节大小为可读格式
@@ -460,42 +458,60 @@ const SettingsPage: React.FC = () => {
 								>
 									开机密码
 								</label>
-								{loginPassword && (
-									<Button
-										danger
-										size="small"
-										onClick={handleClearPassword}
-									>
-										清除密码
-									</Button>
-								)}
 							</div>
 							<div className="space-y-3">
-								<Input.Password
-									key={passwordInputKey}
-									prefix={<LockOutlined />}
-									placeholder={
-										loginPassword
-											? '当前已设置密码，请输入新密码或保持为空'
-											: '请设置开机密码'
-									}
-									value={newPassword}
-									onChange={(e) =>
-										setNewPassword(e.target.value)
-									}
-									visibilityToggle
-									autoComplete="new-password"
-								/>
-								<Input.Password
-									prefix={<LockOutlined />}
-									placeholder="请确认密码"
-									value={confirmPassword}
-									onChange={(e) =>
-										setConfirmPassword(e.target.value)
-									}
-									visibilityToggle
-									autoComplete="new-password"
-								/>
+								{loginPassword && (
+									<div className="flex flex-col space-y-1">
+										<label className="text-gray-600 text-sm">
+											旧密码
+										</label>
+										<Input.Password
+											prefix={<LockOutlined />}
+											placeholder="请输入当前密码"
+											value={oldPassword}
+											onChange={(e) =>
+												setOldPassword(e.target.value)
+											}
+											visibilityToggle
+											autoComplete="current-password"
+										/>
+									</div>
+								)}
+								<div className="flex flex-col space-y-1">
+									<label className="text-gray-600 text-sm">
+										{loginPassword ? '新密码' : '密码'}
+									</label>
+									<Input.Password
+										key={passwordInputKey}
+										prefix={<LockOutlined />}
+										placeholder={
+											loginPassword
+												? '请输入新密码'
+												: '请设置开机密码'
+										}
+										value={newPassword}
+										onChange={(e) =>
+											setNewPassword(e.target.value)
+										}
+										visibilityToggle
+										autoComplete="new-password"
+									/>
+								</div>
+								<div className="flex flex-col space-y-1">
+									<label className="text-gray-600 text-sm">
+										确认密码
+									</label>
+									<Input.Password
+										prefix={<LockOutlined />}
+										placeholder="请确认密码"
+										value={confirmPassword}
+										onChange={(e) =>
+											setConfirmPassword(e.target.value)
+										}
+										visibilityToggle
+										autoComplete="new-password"
+									/>
+								</div>
 								<Button
 									type="primary"
 									onClick={handlePasswordSubmit}
@@ -522,27 +538,25 @@ const SettingsPage: React.FC = () => {
 									<InputNumber
 										id="autoLockMinutes"
 										type="number"
-										min={0}
+										min={1}
 										value={autoLockMinutes}
 										onChange={handleAutoLockChange}
 									/>
 									<span className="text-gray-600">分钟</span>
 								</div>
-								<p className="text-gray-500 text-sm">
-									设置为0表示禁用自动锁定功能，默认5分钟
-								</p>
 							</div>
 						)}
 						{/* 在自动锁定时间设置后添加最大失败尝试次数设置 */}
 						<div className="flex flex-col space-y-2">
 							<label
 								className="text-gray-700 font-medium"
-								id="autoLockMinutes"
+								id="maxFailedAttempts"
 							>
 								最大密码失败尝试次数
 							</label>
 							<div className="flex items-center space-x-3">
 								<InputNumber
+									id="maxFailedAttempts"
 									min={MinFailedAttempts}
 									max={20}
 									value={maxFailedAttempts}
