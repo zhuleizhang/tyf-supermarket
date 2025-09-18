@@ -87,6 +87,9 @@ const LockScreen: React.FC = () => {
 					clearInterval(timerRef.current);
 				}
 			};
+		} else {
+			setLockoutEndTime(null);
+			resetFailedAttempts();
 		}
 	}, []);
 
