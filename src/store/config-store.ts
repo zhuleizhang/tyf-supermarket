@@ -38,6 +38,16 @@ export interface ConfigState {
 	shouldInLockPage: boolean;
 	// 是否应该在锁屏页面
 	setShouldInLockPage: (b: boolean) => void;
+	// 最大失败尝试次数
+	maxFailedAttempts: number;
+	// 设置最大失败尝试次数
+	setMaxFailedAttempts: (count: number) => void;
+	// 锁定结束时间戳
+	lockoutEndTime: number | null;
+	// 设置锁定结束时间
+	setLockoutEndTime: (timestamp: number | null) => void;
+	/** 检查密码输入是否处于锁定状态 */
+	isInputLockedOut: () => boolean;
 }
 
 // 简单的加密函数
@@ -57,7 +67,7 @@ export const decryptPassword = (encryptedPassword: string): string => {
 // 创建配置 store
 export const useConfigStore = create<ConfigState>()(
 	persist(
-		(set) => ({
+		(set, get) => ({
 			// 默认值：5分钟未操作自动返回收银页面，10分钟未操作自动进入收银模式，1天自动备份一次
 			autoReturnToCheckoutMinutes: 1,
 			autoEnterCheckoutModeMinutes: 1,
@@ -103,6 +113,23 @@ export const useConfigStore = create<ConfigState>()(
 				set({
 					shouldInLockPage: Boolean(b),
 				}),
+			// 最大失败尝试次数，默认为10次
+			maxFailedAttempts: 10,
+			// 设置最大失败尝试次数
+			setMaxFailedAttempts: (count: number) =>
+				set({ maxFailedAttempts: count }),
+			// 锁定结束时间戳，null表示未锁定
+			lockoutEndTime: null,
+			// 设置锁定结束时间
+			setLockoutEndTime: (timestamp: number | null) =>
+				set({ lockoutEndTime: timestamp }),
+			// 检查密码输入是否处于锁定状态
+			isInputLockedOut: () => {
+				const state = get();
+				return (
+					!!state.lockoutEndTime && state.lockoutEndTime > Date.now()
+				);
+			},
 		}),
 		{
 			name: 'supermarket-config', // 本地存储的键名

@@ -262,7 +262,7 @@ const CheckoutPage: React.FC = () => {
 	return (
 		<Page
 			className={`flex flex-col p-6 bg-white h-full rounded-lg shadow ${
-				scanning ? 'absolute top-0 left-0 right-0 bottom-0' : ''
+				scanning ? 'absolute top-0 left-0 right-0 bottom-0 z-10' : ''
 			} transition-all duration-300`}
 		>
 			<div className="flex justify-between items-center mb-6">

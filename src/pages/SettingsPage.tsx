@@ -17,11 +17,14 @@ import { orderService, dbUtils, autoExportData } from '../db';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useCartStore } from '@/store';
 
+const MaxFailedAttempts = 5;
+
 const SettingsPage: React.FC = () => {
 	const [newPassword, setNewPassword] = useState<string>('');
 	const [confirmPassword, setConfirmPassword] = useState<string>('');
 	const [passwordInputKey, setPasswordInputKey] = useState<number>(0);
 
+	// 在组件的解构中添加maxFailedAttempts和setMaxFailedAttempts
 	const {
 		autoReturnToCheckoutMinutes,
 		autoEnterCheckoutModeMinutes,
@@ -29,12 +32,14 @@ const SettingsPage: React.FC = () => {
 		topSellingProductsCount,
 		loginPassword,
 		autoLockMinutes,
+		maxFailedAttempts,
 		setAutoReturnToCheckoutMinutes,
 		setAutoEnterCheckoutModeMinutes,
 		setAutoBackupDays,
 		setTopSellingProductsCount,
 		setLoginPassword,
 		setAutoLockMinutes,
+		setMaxFailedAttempts,
 	} = useConfigStore();
 
 	const clearCart = useCartStore((s) => s.clearCart);
@@ -318,6 +323,17 @@ const SettingsPage: React.FC = () => {
 		});
 	};
 
+	// 处理最大失败尝试次数变化
+	const handleMaxFailedAttemptsChange = (value: number) => {
+		if (value >= MaxFailedAttempts) {
+			// 设置最小值为3次，避免用户设置过低导致体验不佳
+			setMaxFailedAttempts(value);
+			message.success('最大密码失败尝试次数已更新');
+		} else {
+			message.warning(`最大失败尝试次数不能少于${MaxFailedAttempts}次`);
+		}
+	};
+
 	// 组件加载时获取存储空间信息
 	useEffect(() => {
 		getStorageInfo();
@@ -517,6 +533,27 @@ const SettingsPage: React.FC = () => {
 								</p>
 							</div>
 						)}
+						{/* 在自动锁定时间设置后添加最大失败尝试次数设置 */}
+						<div className="flex flex-col space-y-2">
+							<label
+								className="text-gray-700 font-medium"
+								id="autoLockMinutes"
+							>
+								最大密码失败尝试次数
+							</label>
+							<div className="flex items-center space-x-3">
+								<InputNumber
+									min={MaxFailedAttempts}
+									max={20}
+									value={maxFailedAttempts}
+									onChange={handleMaxFailedAttemptsChange}
+								/>
+								<span className="text-gray-600">次</span>
+							</div>
+							<p className="text-gray-500 mb-2">
+								超过此次数后，系统将锁定5分钟不允许输入密码
+							</p>
+						</div>
 					</div>
 				</div>
 
