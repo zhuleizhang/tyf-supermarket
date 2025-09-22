@@ -28,6 +28,9 @@ import {
 import { useDebounceFn } from 'ahooks';
 import Page from '@/components/Page';
 import { UNCATEGORIZED_OPTION } from '@/constants';
+import { ColumnsType } from 'antd/es/table';
+import { getProductListRequest, SortOrder } from '@/db/types';
+import { TableProps } from 'antd/lib';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -48,6 +51,8 @@ const ProductsPage: React.FC = () => {
 	);
 	// 分类查询状态
 	const [selectedCategory, setSelectedCategory] = useState<string>(undefined);
+	const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+	const [sortBy, setSortBy] = useState<string>('updatedAt');
 
 	// 模态框状态
 	const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
@@ -94,20 +99,10 @@ const ProductsPage: React.FC = () => {
 	}, []);
 
 	// 加载商品列表
-	const loadProducts = async (
-		page = 1,
-		pageSize = 10,
-		keyword = '',
-		category_id = ''
-	) => {
+	const loadProducts = async (request: getProductListRequest) => {
 		setLoading(true);
 		try {
-			const result = await productService.getProductList(
-				page,
-				pageSize,
-				keyword,
-				category_id
-			);
+			const result = await productService.getProductList(request);
 			setProducts(result.list);
 			setTotal(result.total);
 		} catch (error: any) {
@@ -124,10 +119,37 @@ const ProductsPage: React.FC = () => {
 		setCurrentPage(1); // 选择分类时重置到第一页
 	};
 
+	// 处理表格排序变化
+	const handleTableChange: TableProps<Product>['onChange'] = (
+		pagination,
+		filters,
+		sorter
+	) => {
+		if (!Array.isArray(sorter)) {
+			const sortOrder = sorter.order === 'ascend' ? 'asc' : 'desc';
+			setSortOrder(sortOrder);
+			setSortBy(sorter.field as string);
+		}
+	};
+
 	// 初始化加载
 	useEffect(() => {
-		loadProducts(currentPage, pageSize, searchKeyword, selectedCategory);
-	}, [currentPage, pageSize, searchKeyword, selectedCategory]);
+		loadProducts({
+			page: currentPage,
+			pageSize,
+			keyword: searchKeyword,
+			category_id: selectedCategory,
+			sortBy,
+			sortOrder,
+		});
+	}, [
+		currentPage,
+		pageSize,
+		searchKeyword,
+		selectedCategory,
+		sortOrder,
+		sortBy,
+	]);
 
 	// 处理搜索
 	const handleSearch = (value: string) => {
@@ -180,7 +202,14 @@ const ProductsPage: React.FC = () => {
 
 			// 关闭模态框并刷新列表
 			setIsModalVisible(false);
-			loadProducts(newPage, pageSize, searchKeyword, selectedCategory);
+			loadProducts({
+				page: newPage,
+				pageSize,
+				keyword: searchKeyword,
+				category_id: selectedCategory,
+				sortBy,
+				sortOrder,
+			});
 		} catch (error) {
 			message.error(currentProduct ? '商品更新失败' : '商品添加失败');
 		}
@@ -198,12 +227,14 @@ const ProductsPage: React.FC = () => {
 					const success = await productService.delete(productId);
 					if (success) {
 						message.success('商品删除成功');
-						loadProducts(
-							currentPage,
+						loadProducts({
+							page: currentPage,
 							pageSize,
-							searchKeyword,
-							selectedCategory
-						);
+							keyword: searchKeyword,
+							category_id: selectedCategory,
+							sortBy,
+							sortOrder,
+						});
 					} else {
 						message.error('商品删除失败');
 					}
@@ -215,7 +246,7 @@ const ProductsPage: React.FC = () => {
 	};
 
 	// 表格列定义
-	const columns = [
+	const columns: ColumnsType<Product> = [
 		{
 			title: '商品名称',
 			dataIndex: 'name',
@@ -258,22 +289,26 @@ const ProductsPage: React.FC = () => {
 			width: 80,
 		},
 		{
-			title: '创建时间',
-			dataIndex: 'createdAt',
-			key: 'createdAt',
-			width: 150,
-			render: (createdAt: string) => {
-				const date = new Date(createdAt);
-				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-			},
-		},
-		{
 			title: '更新时间',
 			dataIndex: 'updatedAt',
 			key: 'updatedAt',
 			width: 150,
+			sorter: true,
+			sortDirections: ['descend', 'ascend'],
+			defaultSortOrder: 'descend',
 			render: (updatedAt: string) => {
 				const date = new Date(updatedAt);
+				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+			},
+		},
+		{
+			title: '创建时间',
+			dataIndex: 'createdAt',
+			key: 'createdAt',
+			width: 150,
+			sorter: true,
+			render: (createdAt: string) => {
+				const date = new Date(createdAt);
 				return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
 			},
 		},
@@ -320,7 +355,7 @@ const ProductsPage: React.FC = () => {
 					/>
 					<Select
 						placeholder="请选择分类"
-						style={{ width: 180, marginRight: '10px' }}
+						style={{ width: 180 }}
 						value={selectedCategory}
 						onChange={handleCategoryChange}
 						allowClear
@@ -347,11 +382,12 @@ const ProductsPage: React.FC = () => {
 				</div>
 			</div>
 
-			<Table
+			<Table<Product>
 				columns={columns}
 				dataSource={products}
 				rowKey="id"
 				loading={loading}
+				onChange={handleTableChange}
 				pagination={{
 					current: currentPage,
 					pageSize: pageSize,

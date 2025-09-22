@@ -1,6 +1,7 @@
 import localforage from 'localforage';
 import { isProduction } from '../config';
 import { UNCATEGORIZED_OPTION } from '@/constants';
+import { getProductListRequest } from './types';
 
 // 数据模型类型定义
 export interface Product {
@@ -358,7 +359,6 @@ export const categoryService = {
 	// 清除分类缓存
 	clearCache: clearCategoryCache,
 };
-
 // 商品操作服务
 export const productService = {
 	// 获取所有商品
@@ -382,12 +382,19 @@ export const productService = {
 
 	/** 分页获取商品列表 */
 	getProductList: async (
-		page = 1,
-		pageSize = 10,
-		keyword = '',
-		category_id = ''
+		params: getProductListRequest = {}
 	): Promise<{ list: Product[]; total: number }> => {
 		try {
+			const {
+				page = 1,
+				keyword = '',
+				category_id = '',
+				sortBy = 'updatedAt',
+				sortOrder = 'desc',
+			} = params;
+
+			let pageSize = params.pageSize || 10;
+
 			// 获取所有商品数据
 			let allProducts: Product[] = [];
 			await productsStore.iterate((value) => {
@@ -417,12 +424,12 @@ export const productService = {
 				}
 			}
 
-			// 按创建时间排序（降序）
-			allProducts.sort(
-				(a, b) =>
-					new Date(b.createdAt).getTime() -
-					new Date(a.createdAt).getTime()
-			);
+			// 按指定字段排序（默认按更新时间降序）
+			allProducts.sort((a, b) => {
+				const aTime = new Date(a[sortBy]).getTime();
+				const bTime = new Date(b[sortBy]).getTime();
+				return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+			});
 
 			if (pageSize === Infinity) {
 				pageSize = allProducts.length;
