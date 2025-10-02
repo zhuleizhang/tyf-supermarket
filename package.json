@@ -81,7 +81,7 @@
     "autoprefixer": "^10.4.21",
     "babel-plugin-react-dev-locator": "^1.0.0",
     "cross-env": "^7.0.3",
-    "electron": "^29.0.0",
+    "electron": "^22.3.27",
     "electron-builder": "^26.0.12",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",

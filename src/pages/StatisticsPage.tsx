@@ -50,6 +50,7 @@ interface CategorySalesItem {
 	category: string;
 	salesAmount: number;
 	value: number;
+	[key: string]: any; // 添加索引签名以兼容 recharts ChartDataInput 类型
 }
 
 interface HourlySalesItem {
