@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { productService, type Product } from '../db';
 import { persist } from 'zustand/middleware';
+import NP from 'number-precision';
 
 // 结算商品项类型
 export interface CartItem {
@@ -66,16 +67,17 @@ export const useCartStore = create(
 												price: product?.price,
 											},
 											quantity: item.quantity + quantity,
-											subtotal:
-												(item.quantity + quantity) *
-												product.price,
+											subtotal: NP.times(
+												item.quantity + quantity,
+												product.price
+											),
 										}
 									: item
 							);
 
 							// 重新计算总价
 							const newTotalAmount = updatedItems.reduce(
-								(total, item) => total + item.subtotal,
+								(total, item) => NP.plus(total, item.subtotal),
 								0
 							);
 
@@ -88,12 +90,14 @@ export const useCartStore = create(
 							const newItem: CartItem = {
 								product,
 								quantity,
-								subtotal: product.price * quantity,
+								subtotal: NP.times(product.price, quantity),
 							};
 
 							// 重新计算总价
-							const newTotalAmount =
-								state.totalAmount + newItem.subtotal;
+							const newTotalAmount = NP.plus(
+								state.totalAmount,
+								newItem.subtotal
+							);
 
 							return {
 								cartItems: [...state.cartItems, newItem],
@@ -114,8 +118,10 @@ export const useCartStore = create(
 						const updatedItems = state.cartItems.filter(
 							(item) => item.product.id !== productId
 						);
-						const newTotalAmount =
-							state.totalAmount - itemToRemove.subtotal;
+						const newTotalAmount = NP.minus(
+						state.totalAmount,
+						itemToRemove.subtotal
+					);
 
 						return {
 							cartItems: updatedItems,
@@ -138,20 +144,20 @@ export const useCartStore = create(
 					set((state) => {
 						const updatedItems = state.cartItems.map((item) => {
 							if (item.product.id === productId) {
-								const updatedItem = {
-									...item,
-									quantity,
-									subtotal: item.product.price * quantity,
-								};
-								return updatedItem;
-							}
+							const updatedItem = {
+								...item,
+								quantity,
+								subtotal: NP.times(item.product.price, quantity),
+							};
+							return updatedItem;
+						}
 							return item;
 						});
 
 						const newTotalAmount = updatedItems.reduce(
-							(total, item) => total + item.subtotal,
-							0
-						);
+					(total, item) => NP.plus(total, item.subtotal),
+					0
+				);
 
 						return {
 							cartItems: updatedItems,
@@ -206,8 +212,10 @@ export const useCartStore = create(
 								updatedItems.push({
 									...item,
 									product: latestProduct,
-									subtotal:
-										latestProduct.price * item.quantity,
+									subtotal: NP.times(
+										latestProduct.price,
+										item.quantity
+									),
 								});
 							}
 						} catch (error) {
@@ -215,10 +223,10 @@ export const useCartStore = create(
 						}
 					}
 					// 重新计算总价
-					const newTotalAmount = updatedItems.reduce(
-						(total, item) => total + item.subtotal,
-						0
-					);
+				const newTotalAmount = updatedItems.reduce(
+					(total, item) => NP.plus(total, item.subtotal),
+					0
+				);
 
 					// 更新状态
 					set({
