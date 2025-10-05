@@ -37,7 +37,7 @@ export const bootstrap = async () => {
 					try {
 						// 显示加载中
 						message.loading('正在恢复数据...', 0);
-						importDataFromFilePath(pendingRestorePath);
+						await importDataFromFilePath(pendingRestorePath);
 						message.destroy();
 						message.success('数据恢复成功，即将自动刷新页面');
 						// 清除标记，防止重复恢复
