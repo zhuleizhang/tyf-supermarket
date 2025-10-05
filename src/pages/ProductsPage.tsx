@@ -27,7 +27,7 @@ import {
 } from '../db';
 import { useDebounceFn } from 'ahooks';
 import Page from '@/components/Page';
-import { UNCATEGORIZED_OPTION } from '@/constants';
+import { DEFAULT_UNIT, UNCATEGORIZED_OPTION } from '@/constants';
 import { ColumnsType } from 'antd/es/table';
 import { getProductListRequest, SortOrder } from '@/db/types';
 import { TableProps } from 'antd/lib';
@@ -418,7 +418,7 @@ const ProductsPage: React.FC = () => {
 					layout="vertical"
 					initialValues={{
 						// price: 0,
-						unit: '个',
+						unit: DEFAULT_UNIT,
 					}}
 				>
 					<Form.Item

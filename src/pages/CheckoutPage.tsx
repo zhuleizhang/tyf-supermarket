@@ -27,6 +27,7 @@ import {
 import { useCartStore } from '../store';
 import { useConfigStore } from '@/store/config-store';
 import Page from '@/components/Page';
+import { DEFAULT_UNIT } from '@/constants';
 
 const { Title, Text } = Typography;
 
@@ -414,7 +415,10 @@ const CheckoutPage: React.FC = () => {
 												</span>
 												<span className="font-medium text-xl">
 													数量: {item.quantity}
-													{`（${item.product.unit}）`}
+													{`（${
+														item.product.unit ||
+														DEFAULT_UNIT
+													}）`}
 												</span>
 											</div>
 										}
