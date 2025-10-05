@@ -37,6 +37,9 @@ const CheckoutPage: React.FC = () => {
 	const [isConfirmModalVisible, setIsConfirmModalVisible] =
 		useState<boolean>(false);
 	const [confirmAmount, setConfirmAmount] = useState<string>('');
+	// 防抖状态
+	const [lastEnterTime, setLastEnterTime] = useState<number>(0);
+	const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
 	const autoEnterCheckoutModeMinutes = useConfigStore(
 		(s) => s.autoEnterCheckoutModeMinutes
@@ -142,7 +145,16 @@ const CheckoutPage: React.FC = () => {
 			return;
 		}
 
+		// 防止重复执行
+		if (isProcessing) {
+			console.log('handleBarcodeSearch: 正在处理中，忽略重复调用');
+			return;
+		}
+
 		setLoading(true);
+		setIsProcessing(true);
+		console.log('开始处理条码搜索:', barcodeInput.trim());
+
 		try {
 			const product = await productService.getByBarcode(
 				barcodeInput.trim()
@@ -150,8 +162,10 @@ const CheckoutPage: React.FC = () => {
 			if (product) {
 				// 检查库存
 				addToCart(product);
+				console.log('商品添加成功:', product.name);
 			} else {
 				message.error('未找到该商品');
+				console.log('未找到商品:', barcodeInput.trim());
 				// 全选条码输入框的内容，便于下次扫码直接覆盖
 				setTimeout(() => {
 					if (barcodeRef.current) {
@@ -162,15 +176,36 @@ const CheckoutPage: React.FC = () => {
 			}
 		} catch (error) {
 			message.error('搜索商品失败');
+			console.error('搜索商品失败:', error);
 			playErrorSound();
 		} finally {
 			setLoading(false);
+			setIsProcessing(false);
+			console.log('条码搜索处理完成');
 		}
 	};
 
-	// 处理键盘回车事件
+	// 处理键盘回车事件（带防抖机制）
 	const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		console.log(e.key, 'handleKeyPress');
 		if (e.key === 'Enter') {
+			const currentTime = Date.now();
+			const timeDiff = currentTime - lastEnterTime;
+
+			// 防抖：如果距离上次Enter事件小于300ms，则忽略
+			if (timeDiff < 300) {
+				console.log(`防抖拦截: 时间间隔${timeDiff}ms < 300ms`);
+				return;
+			}
+
+			// 如果正在处理中，则忽略
+			if (isProcessing) {
+				console.log('防抖拦截: 正在处理中');
+				return;
+			}
+
+			console.log(`Enter事件通过防抖检查，时间间隔: ${timeDiff}ms`);
+			setLastEnterTime(currentTime);
 			handleBarcodeSearch();
 		}
 	};
